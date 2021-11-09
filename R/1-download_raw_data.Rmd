@@ -1,0 +1,99 @@
+---
+title: "Downloading CMIP6 data"
+author: "Eric R. Scott"
+date: "Date Initiated"
+output: 
+  html_document: 
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    highlight: kate
+    theme:
+      version: 4
+      bootswatch: flatly
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(conflicted)
+library(epwshiftr)
+library(skimr)
+library(glue)
+
+conflict_prefer("lag", "dplyr")
+conflict_prefer("filter", "dplyr")
+```
+
+*Last compiled: `r Sys.Date()`*
+
+
+# Get list of files to download
+
+```{r}
+idx_ssp126 <- init_cmip6_index(
+  activity = "ScenarioMIP",
+  variable = c("tas", "tasmin", "tasmax", "pr", "hfss", "hfls"),
+  frequency = "mon",
+  experiment = c("ssp126"),
+  # source = , #leave this blank to get all models
+  variant = "r1i1p1f1",
+  years = 2015:2100, #get all the years
+  save = TRUE
+)
+skim(idx_ssp126)
+```
+
+
+```{r}
+idx_ssp126 %>% 
+  summarize(total_size_GB = sum(file_size) * 9.31e-10,
+            n_files = n())
+
+idx_ssp126 %>% 
+  group_by(variable_id, source_id) %>% 
+  summarize(n_files = n())
+```
+Total of 13.7GB and 1706 .nc files just for ssp126!  Some models spread data across multiple small files, others just a single file.  Fortunately, not too difficult to combine with `stars`, I think.
+
+# Download
+
+First, set up directory structure using index
+
+should be data_raw/experiment/source I think?
+
+```{r}
+dirs <- here("data_raw", unique(idx_ssp126$experiment_id), unique(idx_ssp126$source_id))
+new_dirs <- dirs[!map_lgl(dirs, dir.exists)]
+map(new_dirs, ~dir.create(.x, recursive = TRUE))
+```
+
+Then download files.  Probably would be good to chunk it and maybe add some wait times to not overload the servers and get IP banned.
+
+```{r}
+idx_ssp126 <-
+  idx_ssp126 %>% 
+  mutate(filename = glue("{experiment_id}_{source_id}_{variable_id}_{datetime_start}_{datetime_end}.nc"),
+         download_path = here("data_raw", experiment_id, source_id, filename))
+
+to_get <- idx_ssp126 %>% filter(!file.exists(download_path))
+
+#for testing, I'll just get one model
+to_get <- to_get %>% filter(source_id == first(source_id))
+
+download.file(to_get$file_url, destfile = to_get$download_path)
+```
+# Read in files
+
+`read_stars()` should automatically combine .nc files with the same dimensions, I think?
+
+```{r}
+library(stars)
+files <- list.files(here("data_raw", "ssp126", "MRI-ESM2-0"), full.names = TRUE)
+x <- read_stars(files)
+x
+```
+
+Looks like the variables are getting read in wrong. 
