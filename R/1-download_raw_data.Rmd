@@ -1,7 +1,7 @@
 ---
 title: "Downloading CMIP6 data"
 author: "Eric R. Scott"
-date: "Date Initiated"
+date: "2021-11-10"
 output: 
   html_document: 
     toc: yes
@@ -22,6 +22,7 @@ library(conflicted)
 library(epwshiftr)
 library(skimr)
 library(glue)
+library(lubridate)
 
 conflict_prefer("lag", "dplyr")
 conflict_prefer("filter", "dplyr")
@@ -40,9 +41,11 @@ idx_ssp126 <- init_cmip6_index(
   experiment = c("ssp126"),
   # source = , #leave this blank to get all models
   variant = "r1i1p1f1",
-  years = 2015:2100, #get all the years
+  years = 2015:2100, # this doesn't seem to work.  I'll filter manually
   save = TRUE
-)
+) %>%
+  filter(datetime_end <= ymd("2100-12-01"))
+
 skim(idx_ssp126)
 ```
 
@@ -56,7 +59,8 @@ idx_ssp126 %>%
   group_by(variable_id, source_id) %>% 
   summarize(n_files = n())
 ```
-Total of 13.7GB and 1706 .nc files just for ssp126!  Some models spread data across multiple small files, others just a single file.  Fortunately, not too difficult to combine with `stars`, I think.
+
+Total of 11GB and 1694 .nc files just for ssp126!  Some models spread data across multiple small files, others just a single file.  Fortunately, not too difficult to combine with `stars`, I think.
 
 # Download
 
@@ -75,25 +79,19 @@ Then download files.  Probably would be good to chunk it and maybe add some wait
 ```{r}
 idx_ssp126 <-
   idx_ssp126 %>% 
-  mutate(filename = glue("{experiment_id}_{source_id}_{variable_id}_{datetime_start}_{datetime_end}.nc"),
+  mutate(filename = glue("{variable_id}_{experiment_id}_{source_id}_{datetime_start}_{datetime_end}.nc"),
          download_path = here("data_raw", experiment_id, source_id, filename))
+
+#for testing, I'll just pick two models
+idx_ssp126 <- idx_ssp126 %>% filter(source_id %in% c("MRI-ESM2-0", "EC-Earth3"))
 
 to_get <- idx_ssp126 %>% filter(!file.exists(download_path))
 
-#for testing, I'll just get one model
-to_get <- to_get %>% filter(source_id == first(source_id))
-
 download.file(to_get$file_url, destfile = to_get$download_path)
 ```
-# Read in files
 
-`read_stars()` should automatically combine .nc files with the same dimensions, I think?
+# TODO:
 
-```{r}
-library(stars)
-files <- list.files(here("data_raw", "ssp126", "MRI-ESM2-0"), full.names = TRUE)
-x <- read_stars(files)
-x
-```
+- Test with models that use multiple files for time dimension.
+- I dunno, some kinda checksum thing?  Maybe at least checking that the file sizes are correct?
 
-Looks like the variables are getting read in wrong. 
