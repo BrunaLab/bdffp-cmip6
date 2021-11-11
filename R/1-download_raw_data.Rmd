@@ -18,20 +18,20 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(here)
-library(conflicted)
 library(epwshiftr)
-library(skimr)
 library(glue)
 library(lubridate)
-
-conflict_prefer("lag", "dplyr")
-conflict_prefer("filter", "dplyr")
 ```
 
 *Last compiled: `r Sys.Date()`*
 
+# Goal
+
+Eventually, I'd like to download output data from all [CMIP6](https://www.wcrp-climate.org/wgcm-cmip/wgcm-cmip6) models running all 5 [SSP scenarios](https://www.carbonbrief.org/explainer-how-shared-socioeconomic-pathways-explore-future-climate-change).  For the sake of developing this workflow, I'm going to work with two models and one scenario only.
 
 # Get list of files to download
+
+The `epwshiftr` package provides a function to query the CMIP6 database and get back a list of file URLs and metadata.
 
 ```{r}
 idx_ssp126 <- init_cmip6_index(
@@ -46,9 +46,10 @@ idx_ssp126 <- init_cmip6_index(
 ) %>%
   filter(datetime_end <= ymd("2100-12-01"))
 
-skim(idx_ssp126)
+head(idx_ssp126)
 ```
 
+If I were to download all of these, what would be the total file size?
 
 ```{r}
 idx_ssp126 %>% 
@@ -60,38 +61,52 @@ idx_ssp126 %>%
   summarize(n_files = n())
 ```
 
-Total of 11GB and 1694 .nc files just for ssp126!  Some models spread data across multiple small files, others just a single file.  Fortunately, not too difficult to combine with `stars`, I think.
+Total of 11GB and 1694 .nc files just for ssp126!  Some models spread data across multiple small files, others just a single file.  Fortunately, I think it's not too difficult to combine multiple with `stars` if they have the same dimensions.
 
 # Download
 
-First, set up directory structure using index
+## Create directories
 
-should be data_raw/experiment/source I think?
+First, I set up directory structure using the index from above.
+
+The path should be `/data_raw/experiment_id/source_id/`
 
 ```{r}
 dirs <- here("data_raw", unique(idx_ssp126$experiment_id), unique(idx_ssp126$source_id))
+#check if dirs already exist and only make ones that are missing
 new_dirs <- dirs[!map_lgl(dirs, dir.exists)]
 map(new_dirs, ~dir.create(.x, recursive = TRUE))
 ```
 
-Then download files.  Probably would be good to chunk it and maybe add some wait times to not overload the servers and get IP banned.
+## Create file names
 
 ```{r}
 idx_ssp126 <-
   idx_ssp126 %>% 
   mutate(filename = glue("{variable_id}_{experiment_id}_{source_id}_{datetime_start}_{datetime_end}.nc"),
          download_path = here("data_raw", experiment_id, source_id, filename))
-
-#for testing, I'll just pick two models
-idx_ssp126 <- idx_ssp126 %>% filter(source_id %in% c("MRI-ESM2-0", "EC-Earth3"))
-
-to_get <- idx_ssp126 %>% filter(!file.exists(download_path))
-
-download.file(to_get$file_url, destfile = to_get$download_path)
 ```
 
-# TODO:
+## Download files
 
-- Test with models that use multiple files for time dimension.
-- I dunno, some kinda checksum thing?  Maybe at least checking that the file sizes are correct?
+**TODO:** Wrap `download.file()` in a for-loop so only, say, 10 files are downloaded at a time with a `Sys.sleep()` in between.  Downloading too many files at once gets your IP temporarily blocked, I think.
+
+For the sake of testing, I'm downloading files for two models---one that puts 2015--2100 into a single file and one that has a separate .nc file for each year.
+
+```{r}
+idx_ssp126 <- 
+  idx_ssp126 %>%
+  filter(source_id %in% c("MRI-ESM2-0", "EC-Earth3")) #just two models for example
+
+#only download files that don't exist
+to_get <- 
+  idx_ssp126 %>%
+  filter(!file.exists(download_path))
+
+if (nrow(to_get) > 0) {
+  download.file(to_get$file_url, destfile = to_get$download_path)
+}
+# TODO: add some kind of check that download went well.  E.g. that file sizes match what's in idx_ssp126
+```
+
 
