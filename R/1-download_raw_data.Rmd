@@ -103,10 +103,23 @@ to_get <-
   idx_ssp126 %>%
   filter(!file.exists(download_path))
 
-if (nrow(to_get) > 0) {
-  download.file(to_get$file_url, destfile = to_get$download_path)
+#temporary code to download files for each model separately
+EC_earth <- to_get %>% 
+  filter(source_id == "EC-Earth3")
+MRI <- to_get %>% 
+  filter(source_id == "MRI-ESM2-0")
+
+if (nrow(MRI) > 0) {
+  download.file(MRI$file_url, destfile = MRI$download_path)
 }
 # TODO: add some kind of check that download went well.  E.g. that file sizes match what's in idx_ssp126
 ```
 
+
+```{r eval=FALSE}
+#Not necessary to run this.  Haven't tested wrangling on this model yet, and it's a lot of files
+if (nrow(EC_earth) > 0) {
+  download.file(EC_earth$file_url, destfile = EC_earth$download_path)
+}
+```
 
