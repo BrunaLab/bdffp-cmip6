@@ -123,13 +123,13 @@ offset[1] + lon_cen * res[1]
 offset[2] + lat_cen * res[2]
 
 
-bb = st_bbox(c( #I did this sort of by trial and error.  I don't really understand.
+bb <- st_bbox(c( #I did this sort of by trial and error.  I don't really understand.
   xmin = offset[1] + (lon_cen-2) * res[1],
 	ymin = offset[2] + (lat_cen+1) * res[2],
 	xmax = offset[1] + (lon_cen+1) * res[1],
 	ymax = offset[2] + (lat_cen-2) * res[2]
   ), crs = st_crs(x))
-
+bb
 ```
 
 ## Plot bounding box

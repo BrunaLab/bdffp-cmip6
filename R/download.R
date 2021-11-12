@@ -1,44 +1,11 @@
 library(tidyverse)
 library(glue)
-library(epwshiftr)
-library(lubridate)
 library(here)
 
-add_paths <- function(idx){
-  idx %>% 
-    mutate(download_dir = here("data_raw", experiment_id, source_id),
-           file_name = glue("{variable_id}_{experiment_id}_{source_id}_{datetime_start}_{datetime_end}.nc"),
-           full_path = here(download_dir, file_name))
-}
 
-#build CMIP6 data indexes
-#historical
-idx_historical <- 
-  init_cmip6_index(
-    activity = "CMIP",
-    variable = c("tas", "tasmin", "tasmax", "pr", "hfss", "hfls"),
-    frequency = "mon",
-    experiment = "historical",
-    variant = "r1i1p1f1"
-  ) %>% 
-  filter(source_id != "CESM2") %>% #doesn't have SSP data
-  add_paths() %>% 
-  filter(!duplicated(full_path)) %>%  #some files are in multiple "tables", this removes duplicates.
-  write_csv(here("data_raw", "metadata", "idx_hist.csv"))
-
-#ssps
-idx_ssps <-
-  init_cmip6_index(
-    activity = "ScenarioMIP",
-    variable = c("tas", "tasmin", "tasmax", "pr", "hfss", "hfls"),
-    frequency = "mon",
-    experiment = c("ssp126", "ssp245", "ssp585"),
-    variant = "r1i1p1f1"
-  ) %>%
-  filter(datetime_end <= ymd("2100-12-01")) %>% 
-  add_paths() %>% 
-  filter(!duplicated(full_path)) %>%  #some files are in multiple "tables", this removes duplicates.
-  write_csv(here("data_raw", "metadata", "idx_ssps.csv"))
+# Read in indexes
+idx_ssps <- read_csv(here("data_raw", "metadata", "idx_ssps.csv"))
+idx_historical <- read_csv(here("data_raw", "metadata", "idx_hist.csv"))
 
 # Build directories
 
@@ -62,8 +29,23 @@ size_GB <- sum(to_get$file_size) * 9.31e-10
 
 print(glue("downloading {length(dl_url)} files totaling {round(size_GB,2)}GB"))
 
-
 # for (i in 1:length(dl_url)) {
+fails <- tibble(url = NA, path = NA)
 for (i in 1:30) {
-  download.file(url = dl_url[i], destfile = dl_dest[i])
+  x <- try(download.file(url = dl_url[i], destfile = dl_dest[i]))
+  if(inherits(x, "try-error")) {
+    fails <- fails %>% add_row(url = dl_url[i], path = dl_dest[i])
+  }
+  Sys.sleep(3)
 }
+write_csv(fails %>% filter(!is.na(path)), here("data_raw", "failed_downloads.csv"))
+
+#404
+download.file(url = dl_url[1], destfile = dl_dest[1])
+
+#hangs, but no 404
+download.file(url = dl_url[10], destfile = dl_dest[10])
+
+
+#with httr
+library(httr)
