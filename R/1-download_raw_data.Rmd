@@ -98,6 +98,8 @@ idx_ssp126 <-
   idx_ssp126 %>%
   filter(source_id %in% c("MRI-ESM2-0", "EC-Earth3")) #just two models for example
 
+write_csv(idx_ssp126, here("data_raw", "metadata", "idx_ssp126.csv"))
+
 #only download files that don't exist
 to_get <- 
   idx_ssp126 %>%

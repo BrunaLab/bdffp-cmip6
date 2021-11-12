@@ -1,2 +1,2 @@
-options(epwshiftr.dir = here::here("cmip_index"))
+options(epwshiftr.dir = here::here("cache_data"))
 options(epwshiftr.verbose = TRUE)
