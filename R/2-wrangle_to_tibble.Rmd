@@ -42,10 +42,15 @@ The center of BDFFP is at about -2.41ºN, -59.83ºE
 files <- list.files(here("data_raw", "ssp126", "MRI-ESM2-0"), full.names = TRUE)
 x <- read_stars(files, proxy = TRUE) 
 #proxy = TRUE means it only reads metadata.  Doesn't read in files until calculations are performed.
-st_crs(x) <- "WGS84" #set coordinate reference system?  CMIP documentation say it's WGS84
+
+#set coordinate reference system?  CMIP documentation say it's WGS84
+#From James Michielini:
+st_crs(x) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
 x
 ```
-So, there's a bunch of warnings from GDAL, but I don't know what they mean.
+
+So, there's a bunch of warnings from GDAL, but I don't know what they mean. 
 
 # Fix the variable names
 
@@ -133,7 +138,7 @@ bb = st_bbox(c( #I did this sort of by trial and error.  I don't really understa
 x_slice <- slice(x, index = 1, along = time) #take just first year
 
 brazil <- 
-  raster::getData("GADM", country = "BRA", level = 1) %>%
+  raster::getData("GADM", country = "BRA", level = 1, path = here("cache_data")) %>%
   st_as_sf() #get brazil borders
 
 amazonas <- 
@@ -214,4 +219,28 @@ all.equal(as.numeric(x_tbl$hfls), x_tbl2$hfls)
 ```
 
 Both methods calculate the same data, so that's good.
+
+
+# With data across multiple files
+
+I think I need to read in each variable separately, then aggregate stars objects to create separate attributes for each variable.
+
+```{r}
+idx <- read_csv(here("data_raw", "metadata", "idx_ssp126.csv"))
+EC_earth_files <- 
+  idx %>% 
+  filter(source_id == "EC-Earth3") %>% 
+  group_by(variable_id) %>% 
+  select(download_path) %>% 
+  group_split()
+
+EC_stars_list <- 
+  EC_earth_files %>% 
+  map(~{
+    read_stars(.x$download_path) %>% set_names(.x$variable_id[1])
+  })
+EC_stars <- do.call(c, EC_stars_list)
+```
+
+This pattern should work for models with fewer files too, so this should be the function to write.
 
