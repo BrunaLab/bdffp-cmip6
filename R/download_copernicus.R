@@ -1,3 +1,12 @@
+# Downloads CMIP6 data from Copernicus (https://cds.climate.copernicus.eu/).
+# Copernicus provides a Python package for accessing their API which allows for
+# spatial cropping. This R script wraps their Python function and iterates it
+# over the index of datasets needed generated in `build_index.R`.  Not all
+# datasets are available, and even those available are not all successfully
+# downloaded because of missing combinations of variables and scenarios.
+
+
+# Load packages -----------------------------------------------------------
 library(reticulate)
 library(here)
 library(tidyverse)
@@ -5,31 +14,32 @@ library(glue)
 library(here)
 use_virtualenv(here("r-reticulate"))
 
-# Read in indexes
-idx <- read_csv(here("data_raw", "metadata", "cmip6_index.csv"))
-
 # Wrap python function to work in R
 source_python(here("R", "download_cmip6.py"))
-
-
+# Usage:
 # download_cmip6(
 #   experiment_id = "historical",
-#   variable_long_name = "daily_maximum_near_surface_air_temperature",
+#   variable_long_name = "precipitation",
 #   source_id = "awi_cm_1_1_mr",
-#   path = "/Users/scottericr/Documents/heliconia-cmip/data_raw/historical/awi_cm_1_1_mr/tasmax_historical_awi_cm_1_1_mr.zip"
+#   path = "test.zip"
 # )
 
-#some requests apparently take a lot longer than others
+# Read in index -----------------------------------------------------------
+idx <- read_csv(here("data_raw", "metadata", "cmip6_index.csv"))
 
+
+# Set up query ------------------------------------------------------------
 dl_df <- idx %>% 
   group_by(experiment_id, variable_long_name, variable_id, source_id) %>% 
   count() %>% #just a way of getting only unique values
   ungroup() %>% 
   select(-n) %>% 
+  #match style used by API
   mutate(across(
     where(is.character),
     ~tolower(.x) %>% str_replace_all("[-\\s]", "_")
   )) %>% 
+  # Create download paths and file names
   mutate(dir = here(
     "data_raw",
     experiment_id,
@@ -37,13 +47,7 @@ dl_df <- idx %>%
     file_name = glue("{variable_id}_{experiment_id}_{source_id}.zip"),
     path = here(dir, file_name))
 
-# View(dl_df)
-
-#did we get the snakecase conversion right?
-
-# dl_df %>% count(source_id) %>% View()
-
-#available on portal:
+# Models (source_id) available on Copernicus:
 on_portal <- c("access_cm2", "access_esm1-5", "awi_cm-1-1-mr", "awi_esm-1-1-lr", 
            "bcc_csm2-mr", "bcc_esm1", "cams_csm1-0", "canesm5", "canesm5_canoe", 
            "cesm2", "cesm2_fv2", "cesm2_waccm", "cesm2_waccm-fv2", "ciesm", 
@@ -58,19 +62,45 @@ on_portal <- c("access_cm2", "access_esm1-5", "awi_cm-1-1-mr", "awi_esm-1-1-lr",
            "mri_esm2-0", "nesm3", "norcpm1", "noresm2_lm", "noresm2_mm", 
            "sam0_unicon", "taiesm1", "ukesm1_0-ll")
 
-avail <- dl_df %>% count(source_id) %>% filter(source_id %in% on_portal) %>% pull(source_id)
-avail
-dl_df <- dl_df %>% 
-  filter(source_id %in% avail)
-#shit, only 9 are actually available through this portal
+avail <- 
+  dl_df %>%
+  count(source_id) %>%
+  filter(source_id %in% on_portal) %>% 
+  pull(source_id)
+# avail
+# Only 9 of the models we are looking for are available through this portal
 
+dl_df <- 
+  dl_df %>% 
+  filter(source_id %in% avail)
+
+# Create download directories ---------------------------------------------
 dirs_to_make <- dl_df$dir[!map_lgl(dl_df$dir, dir.exists)]
 walk(unique(dirs_to_make), ~dir.create(.x, recursive = TRUE))
 
 
+# Download .zip files -----------------------------------------------------
+safe_dl <- safely(download_cmip6) #make download function fail gracefully
+
 dl_df %>%
   select(experiment_id, variable_long_name, source_id, path) %>%
-  # head(2) %>% #for testing
-  pwalk(download_cmip6)
+  filter(!file.exists(path)) %>% #only ones that haven't been downloaded yet
+  pwalk(safe_dl)
 
-#TODO: make download_cmip6 fail gracefully, only download files that don't already exist
+
+# Extract .nc files -------------------------------------------------------
+# I only need the .nc files in the .zip files.
+
+dl_exists <- dl_df %>% filter(file.exists(path))
+
+walk2(dl_exists$path, dl_exists$dir, ~{
+  file_nc <- 
+    unzip(.x, list = TRUE) %>% 
+    filter(str_detect(Name, "\\.nc$")) %>% 
+    pull(Name)
+  
+  unzip(.x, files = file_nc, exdir = here(.y))
+})
+
+
+#TODO: figure out which downloads failed or weren't available from this portal.  Download directly from esgf, I guess?
