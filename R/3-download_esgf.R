@@ -46,14 +46,16 @@ esgf_dl <-
 to_get <- esgf_dl %>% filter(!file.exists(path))
 
 # Loop through files to download slowly so IP doesn't get banned.  This loop also crops files spatially as they are read in, so they are the same extent as those downloaded from Copernicus.
-
+safe_GET <- possibly(GET, NULL)
 for(i in 1:nrow(to_get)) {
   print(glue("downloading {to_get$file_name[i]}: {i} of {nrow(to_get)}"))
   orig <- to_get$path[i]
   dl_path <- paste0(orig, "_full")
-  y <- GET(to_get$file_url[i], write_disk(dl_path), timeout(20))
-
-  if (!http_error(y)) {
+  y <- safe_GET(to_get$file_url[i], write_disk(dl_path), timeout(5))
+  if (is.null(y)) {
+    warning("Timeout reached (probably)")
+    file.remove(dl_path)
+  } else if (!http_error(y)) {
     #crop file and delete original
     cdo("-sellonlatbox,-65,-50,-5,0", dl_path, orig)
     file.remove(dl_path)
@@ -61,7 +63,7 @@ for(i in 1:nrow(to_get)) {
   } else {
     warn_for_status(y)
   }
-  Sys.sleep(2)
+  Sys.sleep(1.5)
 }
 to_get$source_id %>% unique()
 
