@@ -1,5 +1,6 @@
 library(epwshiftr)
 library(tidyverse)
+library(lubridate)
 library(here)
 
 hist <- esgf_query(
@@ -35,7 +36,11 @@ ssps <- esgf_query(
   type = "File"
 ) %>% #remove duplicated variables that appear in multiple "tables"
   group_by(experiment_id, source_id, variable_id) %>%
-  filter(table_id == first(table_id)) %>% ungroup()
+  filter(table_id == first(table_id)) %>%
+  ungroup() %>%
+  # some projections go to 2300.  Remove those files
+  #TODO: double-check that all models that go to 2300 have a file that ends in 2100
+  filter(datetime_end <= ymd("2100-12-01"))
 
 ssps_incomp <- 
   ssps %>% 
