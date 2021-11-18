@@ -3,42 +3,61 @@
 
 library(epwshiftr)
 library(tidyverse)
-
+library(here)
+library(glue)
+library(httr)
+library(ClimateOperators)
 
 # Read data ---------------------------------------------------------------
 
 not_in_copernicus <- read_csv(here("data_raw", "not_in_copernicus.csv"))
+idx <- read_csv(here("data_raw", "metadata", "cmip6_index.csv"))
 
 # Find files that still need to be downloaded -----------------------------
 
-#wrap function to include defaults and absorb extra arguments so it works with pwalk()
-build_index <- function(activity, variable_id, experiment_id, source_id, ...) {
-  esgf_query(
-    activity = activity,
-    variable = variable_id,
-    experiment = experiment_id,
-    frequency = "mon",
-    source = source_id,
-    resolution = NULL,
-    type = "File"
+esgf_dl <-
+  right_join(idx, not_in_copernicus, 
+             by = c("source_id" = "source_id0", "experiment_id", "variable_id"))
+
+# some combos are 1 file per, some are up to 165 files per (1 per year)
+esgf_dl %>% 
+  count(source_id, experiment_id, variable_id) %>% filter(n!=1)
+
+
+# Create download directories ---------------------------------------------
+dirs_to_make <- esgf_dl$dir[!map_lgl(esgf_dl$dir, dir.exists)]
+walk(unique(dirs_to_make), ~dir.create(.x, recursive = TRUE))
+
+
+# Download files ----------------------------------------------------------
+# first, fix path to be .nc and to account for multiple files
+
+esgf_dl <-
+  esgf_dl %>% 
+  mutate(
+    file_name = glue(
+      "{variable_id}_{experiment_id}_{source_id}_{datetime_start}--{datetime_end}.nc"
+    ),
+    path = here(dir, file_name)
   )
+
+#check if any files exist already
+
+to_get <- esgf_dl %>% filter(!file.exists(path))
+
+# Loop through files to download slowly so IP doesn't get banned.  This loop also crops files spatially as they are read in, so they are the same extent as those downloaded from Copernicus.
+
+for(i in 1:nrow(to_get)) {
+  orig <- to_get$path[i]
+  dl_path <- paste0(orig, "_full")
+  y <- GET(to_get$file_url[i], write_disk(dl_path), timeout(20))
+  warn_for_status(y)
+  if (!http_error(y)) {
+    #crop file and delete original
+    cdo("-sellonlatbox,-65,-50,-5,0", dl_path, orig)
+    file.remove(dl_path)
+  }
+  Sys.sleep(2)
 }
-
-esgf_query(
-  activity = "CMIP",
-  variable = "pr",
-  experiment = "historical",
-  frequency = "mon",
-  source = "CIESM",
-  resolution = NULL,
-  type = "File"
-)
-
-
-dl_remaining <-
-  not_in_copernicus %>% 
-  count(experiment_id, variable_id, source_id) %>% 
-  mutate(activity = if_else(experiment_id == "historical", "CMIP", "ScenarioMIP")) %>%
-  pmap_df(build_index)
 
 
