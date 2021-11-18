@@ -35,10 +35,12 @@ dl_df <- idx %>%
   ungroup() %>% 
   select(-n) %>% 
   #match style used by API
-  mutate(across(
-    where(is.character),
-    ~tolower(.x) %>% str_replace_all("[-\\s]", "_")
-  )) %>% 
+  rename(variable_long_name0 = variable_long_name,
+         source_id0 = source_id) %>% 
+  mutate(variable_long_name = tolower(variable_long_name0) %>%
+           str_replace_all("[-\\s]", "_"),
+         source_id = tolower(source_id0) %>%
+           str_replace_all("[-\\s]", "_") )%>% 
   # Create download paths and file names
   mutate(dir = here(
     "data_raw",
@@ -70,19 +72,19 @@ avail <-
 # avail
 # Only 9 of the models we are looking for are available through this portal
 
-dl_df <- 
+dl_avail <- 
   dl_df %>% 
   filter(source_id %in% avail)
 
 # Create download directories ---------------------------------------------
-dirs_to_make <- dl_df$dir[!map_lgl(dl_df$dir, dir.exists)]
+dirs_to_make <- dl_avail$dir[!map_lgl(dl_avail$dir, dir.exists)]
 walk(unique(dirs_to_make), ~dir.create(.x, recursive = TRUE))
 
 
 # Download .zip files -----------------------------------------------------
 safe_dl <- safely(download_cmip6) #make download function fail gracefully
 
-dl_df %>%
+dl_avail %>%
   select(experiment_id, variable_long_name, source_id, path) %>%
   filter(!file.exists(path)) %>% #only ones that haven't been downloaded yet
   pwalk(safe_dl)
@@ -91,7 +93,7 @@ dl_df %>%
 # Extract .nc files -------------------------------------------------------
 # I only need the .nc files in the .zip files.
 
-dl_exists <- dl_df %>% filter(file.exists(path))
+dl_exists <- dl_avail %>% filter(file.exists(path))
 
 walk2(dl_exists$path, dl_exists$dir, ~{
   file_nc <- 
@@ -103,4 +105,7 @@ walk2(dl_exists$path, dl_exists$dir, ~{
 })
 
 
-#TODO: figure out which downloads failed or weren't available from this portal.  Download directly from esgf, I guess?
+dl_remaining <- dl_df %>% filter(!file.exists(path))
+dl_remaining %>% count(source_id)
+# a few models are just missing a couple of files (variable x scenario), but others are missing entirely.
+write_csv(dl_remaining, here("data_raw", "not_in_copernicus.csv"))
