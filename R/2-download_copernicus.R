@@ -25,8 +25,18 @@ source_python(here("R", "download_cmip6.py"))
 # )
 
 # Read in index -----------------------------------------------------------
-idx <- read_csv(here("data_raw", "metadata", "cmip6_index.csv"))
+idx_raw <- read_csv(here("data_raw", "metadata", "cmip6_index.csv"))
 
+
+# Summarize index ---------------------------------------------------------
+
+#index has multiple entries for some combinations where data is spread across multiple files in ESGF
+idx <- idx_raw %>%
+  group_by(across(mip_era:variable_units)) %>% 
+  summarize(datetime_start = min(datetime_start),
+            datetime_end = max(datetime_end),
+            file_size = sum(file_size),
+            .groups = "drop")
 
 # Set up query ------------------------------------------------------------
 dl_df <- idx %>% 
