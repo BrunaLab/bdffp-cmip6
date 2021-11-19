@@ -51,7 +51,7 @@ for(i in 1:nrow(to_get)) {
   print(glue("downloading {to_get$file_name[i]}: {i} of {nrow(to_get)}"))
   orig <- to_get$path[i]
   dl_path <- paste0(orig, "_full")
-  y <- safe_GET(to_get$file_url[i], write_disk(dl_path), timeout(5))
+  y <- safe_GET(to_get$file_url[i], write_disk(dl_path), timeout(60))
   if (is.null(y)) {
     warning("Timeout reached (probably)")
     file.remove(dl_path)
@@ -65,5 +65,9 @@ for(i in 1:nrow(to_get)) {
   }
   Sys.sleep(1.5)
 }
-to_get$source_id %>% unique()
+failed <- esgf_dl %>% filter(!file.exists(path))
+write_csv(failed, here("data_raw", "esgf_dl_failed.csv"))
 
+# failed %>% 
+#   group_by(source_id, experiment_id) %>% 
+#   summarize(n_var_missing = length(unique(variable_id))) %>% View()

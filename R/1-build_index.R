@@ -64,12 +64,18 @@ idx_incomp <-
   filter(n_var != 24) %>% 
   pull(source_id)
 
-idx <- idx %>% 
-  filter(!source_id %in% idx_incomp)
+idx <-
+  idx %>% 
+  filter(!source_id %in% idx_incomp) %>% 
+# Remove high res if duplicate resolutions
+  filter(source_id != "EC-Earth3-Veg") %>% 
+  filter(source_id != "MPI-ESM1-2-HR") %>% 
+  filter(!(source_id == "FIO-ESM-2-0" & nominal_resolution == "10000 km"))
+ #INM-CM4-8 and INM-CM5-0 might also be duplicates with different resolutions.  Can't tell yet from documentation.
 
 unique(idx$source_id)
 
 
-#21 models with all the variables for both historical and projections
+#19 models with all the variables for both historical and projections
 
 write_csv(idx, here("data_raw", "metadata", "cmip6_index.csv"))
