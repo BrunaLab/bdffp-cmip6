@@ -9,36 +9,6 @@ library(here)
 library(units)
 library(lubridate)
 
-# Read in .nc files -------------------------------------------------------
-
-files <- list.files(here("data_raw", "ssp126", "access_cm2"), pattern = ".nc", full.names = TRUE)
-
-scenarios <- list.dirs(here("data_raw"), recursive = FALSE, full.names = FALSE)
-scenarios <- scenarios[scenarios != "metadata"]
-
-dirs_to_map <- dir(here("data_raw", scenarios), full.names = TRUE)
-
-#return NA in case of error (e.g. due to empty directory)
-safe_read_stars <- possibly(read_stars, otherwise = NULL)
-
-stars_list <- 
-  dirs_to_map %>%
-  map(~list.files(.x, pattern = ".nc$", full.names = TRUE)) %>% 
-  map(possibly(read_stars, NULL)) %>%
-  # name objects by path
-  set_names(dirs_to_map) %>% 
-  # remove errors (e.g. no files in directory)
-  compact() %>% 
-  map(
-    ~.x %>%
-      # set crs
-      st_set_crs("WGS84") %>% 
-      # fix variable names using first part of filename
-      set_names(str_extract(names(.x), "^[:alpha:]+(?=_)"))
-    )
-
-# stars_list
-
 # Create 200km radius -----------------------------------------------------
 
 circle <-
@@ -49,46 +19,59 @@ circle <-
   st_sfc()
 
 
-# Aggregate ---------------------------------------------------------------
-# aggregate spatially over area of circle.  exact=TRUE weights pixels that are
-# only partially inside the circle to get a weighted average (I think).
+# Functions ---------------------------------------------------------------
 
-stars_agg <-
-  map(stars_list, ~{
-    aggregate(
-      .x,
-      circle,
-      FUN = mean,
-      join = st_intersects,
-      exact = TRUE
-    )
-  })
+# read_stars() but return NULL instead of erroring
+safe_read_stars <- possibly(read_stars, NULL)
 
-# Convert to tibble -------------------------------------------------------
-#TODO: put units back.  For some reason aggregating strips units?
-out <- 
-  stars_agg %>% 
-  map_df(~as_tibble(.x) %>%
-           select(-sfc) %>%
-           mutate(time = as.POSIXct(time)),
-         .id = "filepath")
-# nrow(out)
+## Lowest level (source x scenario) ----------------------------------------
 
-# out$filepath[1:5] %>% str_split("/")
+# read in files for a single source and scenario (e.g. accesss_cm2 historical)
+read_stars_scenario <- function(dir) {
+  scenario_files <- list.files(dir, pattern = ".nc$", full.names = TRUE)
+  vars <- c("hfls", "hfss", "pr", "tas", "tasmin", "tasmax")
+  map(paste0(vars, "_"), ~scenario_files[str_detect(scenario_files, .x)]) %>%
+    set_names(vars) %>% 
+    safe_read_stars()
+}
 
-#columns for model and scenario from the file paths
-out <- out %>% 
-  mutate(source_id = str_split(filepath, "/", simplify = TRUE)[,8],
-         experiment_id = str_split(filepath, "/", simplify = TRUE)[,7])
+# for a single scenario, aggregate a stars object and convert to a tibble, do some wrangling.
+agg_to_tibble <- function(stars_scenario, by) {
+  stars_scenario %>% 
+    st_set_crs("WGS84") %>% 
+    aggregate(by = circle, FUN = mean, join = st_intersects, exact = TRUE) %>% 
+    as_tibble() %>% 
+    select(-sfc) %>%
+    mutate(time = as.POSIXct(time)) %>% 
+    #extract short variable names to replace long ones
+    rename_with(~str_extract(.x,"^\\w+(?=\\.)"), .cols = -time)
+}
 
-# out %>% 
-#   group_by(source_id, experiment_id) %>% 
-#   summarise(start_time = min(time), end_time = max(time))
 
-#some go out to 2300, but all go to 2100
-out <- out %>% filter(time <= ymd_hms("2100-12-16 12:00:00"))
+## Low level (source) ------------------------------------------------------
 
-ggplot(out, aes(x = time, y = tas, color = scenario)) +
-  geom_line(alpha = 0.5) +
-  geom_smooth() +
-  facet_wrap(~model) 
+# read in .nc files, aggregate spatially, combine all scenarios into a tibble, and write to .csv file.
+aggregate_write <- function(source_id, by) {
+  dirs_to_map <- dir(here("data_raw2", source_id), full.names = TRUE)
+  out_df <-
+    dirs_to_map %>% 
+    map(read_stars_scenario) %>% 
+    compact() %>% #removes any NULLs
+    set_names(dirs_to_map) %>% 
+    map_df(~agg_to_tibble(.x, by = by), .id = "dir") %>% 
+    mutate(source_id = str_match(dir, "/([^/]+)/([^/]+)$" )[,2],
+           experiment_id = str_match(dir, "/([^/]+)/([^/]+)$")[,3],
+           .after = dir) 
+  
+  write_csv(out_df, here("data", paste(source_id, "data.csv", sep = "_")))
+}
+# E.g.:
+# aggregate_write("access_cm2", by = circle)
+
+
+# Convert all data --------------------------------------------------------
+
+# do the aggregate_write() function for all sources
+
+sources <- dir(here("data_raw2"))
+walk(sources, ~aggregate_write(.x, by = circle))
