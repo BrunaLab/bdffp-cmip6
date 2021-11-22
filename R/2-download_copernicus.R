@@ -25,7 +25,7 @@ source_python(here("R", "download_cmip6.py"))
 # )
 
 # Read in index -----------------------------------------------------------
-idx_raw <- read_csv(here("data_raw", "metadata", "cmip6_index.csv"))
+idx_raw <- read_csv(here("metadata", "cmip6_index.csv"))
 
 
 # Summarize index ---------------------------------------------------------
@@ -43,7 +43,7 @@ dl_df <- idx %>%
   group_by(experiment_id, variable_long_name, variable_id, source_id) %>% 
   count() %>% #just a way of getting only unique values
   ungroup() %>% 
-  select(-n) %>% 
+  dplyr::select(-n) %>% 
   #match style used by API
   rename(variable_long_name0 = variable_long_name,
          source_id0 = source_id) %>% 
@@ -54,8 +54,8 @@ dl_df <- idx %>%
   # Create download paths and file names
   mutate(dir = here(
     "data_raw",
-    experiment_id,
-    source_id),
+    source_id,
+    experiment_id),
     file_name = glue("{variable_id}_{experiment_id}_{source_id}.zip"),
     path = here(dir, file_name))
 
@@ -95,7 +95,7 @@ walk(unique(dirs_to_make), ~dir.create(.x, recursive = TRUE))
 safe_dl <- safely(download_cmip6) #make download function fail gracefully
 
 dl_avail %>%
-  select(experiment_id, variable_long_name, source_id, path) %>%
+  dplyr::select(experiment_id, variable_long_name, source_id, path) %>%
   filter(!file.exists(path)) %>% #only ones that haven't been downloaded yet
   pwalk(safe_dl)
 
@@ -118,4 +118,4 @@ walk2(dl_exists$path, dl_exists$dir, ~{
 dl_remaining <- dl_df %>% filter(!file.exists(path))
 dl_remaining %>% count(source_id)
 # a few models are just missing a couple of files (variable x scenario), but others are missing entirely.
-write_csv(dl_remaining, here("data_raw", "not_in_copernicus.csv"))
+write_csv(dl_remaining, here("metadata", "not_in_copernicus.csv"))

@@ -78,4 +78,4 @@ unique(idx$source_id)
 
 #19 models with all the variables for both historical and projections
 
-write_csv(idx, here("data_raw", "metadata", "cmip6_index.csv"))
+write_csv(idx, here("metadata", "cmip6_index.csv"))

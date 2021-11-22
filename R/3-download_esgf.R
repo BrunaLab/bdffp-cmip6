@@ -10,8 +10,8 @@ library(ClimateOperators)
 
 # Read data ---------------------------------------------------------------
 
-not_in_copernicus <- read_csv(here("data_raw", "not_in_copernicus.csv"))
-idx <- read_csv(here("data_raw", "metadata", "cmip6_index.csv"))
+not_in_copernicus <- read_csv(here("metadata", "not_in_copernicus.csv"))
+idx <- read_csv(here("metadata", "cmip6_index.csv"))
 
 # Find files that still need to be downloaded -----------------------------
 
