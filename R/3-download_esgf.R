@@ -66,7 +66,7 @@ for(i in 1:nrow(to_get)) {
   Sys.sleep(1.5)
 }
 failed <- esgf_dl %>% filter(!file.exists(path))
-write_csv(failed, here("data_raw", "esgf_dl_failed.csv"))
+write_csv(failed, here("metadata", "esgf_dl_failed.csv"))
 
 # failed %>% 
 #   group_by(source_id, experiment_id) %>% 
