@@ -8,6 +8,9 @@ library(stars)
 library(here)
 library(units)
 library(lubridate)
+# library(conflicted)
+# conflict_prefer("select", "dplyr")
+# conflict_prefer("filter", "dplyr")
 
 # Create 200km radius -----------------------------------------------------
 
@@ -53,20 +56,21 @@ agg_to_tibble <- function(stars_scenario, by) {
 # read in .nc files, aggregate spatially, combine all scenarios into a tibble, and write to .csv file.
 aggregate_write <- function(source_id, by) {
   dirs_to_map <- dir(here("data_raw", source_id), full.names = TRUE)
+  print("cropping")
   out_df <-
     dirs_to_map %>% 
     map(read_stars_scenario) %>% 
-    compact() %>% #removes any NULLs
     set_names(dirs_to_map) %>% 
+    compact() %>% #removes any NULLs
     map_df(~agg_to_tibble(.x, by = by), .id = "dir") %>% 
     mutate(source_id = str_match(dir, "/([^/]+)/([^/]+)$" )[,2],
            experiment_id = str_match(dir, "/([^/]+)/([^/]+)$")[,3],
            .after = dir) 
-  
+  print("writing")
   write_csv(out_df, here("data", paste(source_id, "data.csv", sep = "_")))
 }
 # E.g.:
-# aggregate_write("access_cm2", by = circle)
+aggregate_write("canesm5", by = circle)
 
 
 # Convert all data --------------------------------------------------------
