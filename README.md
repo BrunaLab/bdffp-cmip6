@@ -21,7 +21,9 @@ and ESGF (<https://esgf-node.llnl.gov/search/cmip6/>) for combinations
 of source, experiment, and variable that were not available from
 Copernicus. See .csv files in the `metadata/` directory for a list of
 files that were not available from Copernicus and were consequently
-downloaded directly from ESGF.
+downloaded directly from ESGF. There were a few that didn’t download
+using the scripts in `R/` and I had to download manually and then crop
+using the `R/manual_crop.R`.
 
 # Data processing overview
 
@@ -63,9 +65,9 @@ To reproduce download and analysis run the scripts in `R/` sequentially.
 Please note that this will take a very long time (possibly 24+ hrs)
 because of the purposefully slow download script (to avoid bans due to
 rate limits). Downloads from Copernicus use a modified Python script to
-access their API loaded into R using the `reticulate` package. This
-might not work “out of the box”, although I think `renv` should be set
-up to handle the Python dependencies.
+access their API loaded into R using the `reticulate` package. To access
+the Compernicus API, you’ll need to go through the steps described here:
+<https://cds.climate.copernicus.eu/api-how-to>
 
 # QA/QC
 
