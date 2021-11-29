@@ -5,6 +5,8 @@
 
 library(tidyverse)
 library(stars)
+# library(PCICt)
+# library(exactextractr)
 library(here)
 library(units)
 library(lubridate)
@@ -70,7 +72,7 @@ aggregate_write <- function(source_id, by) {
   write_csv(out_df, here("data", paste(source_id, "data.csv", sep = "_")))
 }
 # E.g.:
-aggregate_write("canesm5", by = circle)
+# aggregate_write("canesm5", by = circle)
 
 
 # Convert all data --------------------------------------------------------
