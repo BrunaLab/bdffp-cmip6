@@ -13,6 +13,7 @@ library(tidyverse)
 library(glue)
 library(here)
 use_virtualenv(here("r-reticulate"))
+import("cdsapi")
 
 # Wrap python function to work in R
 source_python(here("R", "download_cmip6.py"))
