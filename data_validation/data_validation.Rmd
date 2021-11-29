@@ -1,0 +1,315 @@
+---
+title: "Plot and validate CMIP6 downloads"
+output: 
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pointblank)
+library(tidyverse)
+library(here)
+library(patchwork)
+library(lubridate)
+# Use `validate_rmd()` here to set options for the
+# pointblank validation workflow within R Markdown documents
+```
+
+```{r load_index, message=FALSE, warning=FALSE, include=FALSE}
+idx <- read_csv(here("metadata", "cmip6_index.csv"))
+```
+
+# Check that all models were downloaded
+
+Check that all the directories for the .nc files got made
+
+```{r validate=TRUE}
+source_dl <- dir(here("data_raw"))
+source_id <- idx$source_id %>% unique() %>% str_to_lower() %>% str_replace_all("-", "_")
+stop_if_not(!any(!source_dl %in% source_id))
+```
+
+Check that all the corresponding .csv files exist
+
+```{r validate=TRUE}
+csvs <- list.files(here('data'))
+stop_if_not(!any(!csvs %in% paste0(source_id, "_data.csv")))
+```
+
+
+```{r read_files, message=FALSE, warning=FALSE, include=FALSE}
+#read in all files
+df_list <-
+  map(list.files(here('data'), full.names = TRUE), read_csv) %>%
+  set_names(map(., ~.x$source_id[1]))
+```
+
+```{r agent, include=FALSE}
+#set default action levels very strict
+al <- action_levels(warn_at = 0.01, stop_at = 0.1)
+#create pointblank agent
+cmip_agent <- 
+  df_list[[1]] %>% 
+  create_agent(actions = al) %>% 
+  col_exists(c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+             label = "all variables exist") %>%
+  col_vals_make_set(experiment_id, c("historical", "ssp126", "ssp245", "ssp585"),
+                    label = "all scenarios exist") %>% 
+  col_vals_not_null(vars(hfls, hfss, tas, tasmin, tasmax, pr),
+                    actions = action_levels(stop_at = 1),
+                    label = "no missing values") %>% 
+  col_vals_between(c(tas, tasmin, tasmax), 275, 325,
+                   label = "temp is reasonable") %>%
+  col_is_posix(time) %>%
+  col_vals_between(
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  ) %>%
+  col_vals_between(
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
+```
+
+
+```{r plot_fun, include=FALSE}
+# Function to plot data
+plot_all <- function(data) {
+  p_list <- map(c("tas", "tasmin", "tasmax", "pr", "hfls", "hfss"),
+      ~ggplot(data,
+              aes_string(x = "time", y = .x, color = "experiment_id")) +
+        geom_line(alpha = 0.5) + 
+        geom_smooth(se = FALSE)
+  ) 
+  patchwork::wrap_plots(p_list, guides = "collect") &
+    plot_annotation(title = data$source_id[1])
+}
+```
+
+```{r echo=FALSE}
+i=1
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+
+
+```{r echo=FALSE}
+i=2
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+
+
+```{r echo=FALSE}
+i=3
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+
+```{r echo=FALSE}
+i=4
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+
+```{r echo=FALSE}
+i=5
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+```{r echo=FALSE}
+i=6
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+```{r echo=FALSE}
+i=7
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+```{r echo=FALSE}
+i=8
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+
+```{r echo=FALSE}
+i=9
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+```{r echo=FALSE}
+i=10
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+```{r echo=FALSE}
+i=11
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+
+```{r echo=FALSE}
+i=12
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+```{r echo=FALSE}
+i=13
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+```{r echo=FALSE}
+i=14
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+```{r echo=FALSE}
+i=15
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+```{r echo=FALSE}
+i=16
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+
+```{r echo=FALSE}
+i=17
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+```{r echo=FALSE}
+i=18
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
+```{r echo=FALSE}
+i=19
+htmltools::h2(names(df_list[i]))
+```
+```{r validate=TRUE}
+cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_all(df_list[[i]])
+```
+
