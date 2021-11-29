@@ -5,14 +5,12 @@
 
 library(tidyverse)
 library(stars)
-# library(PCICt)
-# library(exactextractr)
+library(PCICt)
+library(exactextractr)
 library(here)
 library(units)
 library(lubridate)
-# library(conflicted)
-# conflict_prefer("select", "dplyr")
-# conflict_prefer("filter", "dplyr")
+
 
 # Create 200km radius -----------------------------------------------------
 
