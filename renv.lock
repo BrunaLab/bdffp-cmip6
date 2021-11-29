@@ -49,6 +49,13 @@
       "Repository": "CRAN",
       "Hash": "4ed05e9c9726267e4a5872e09c04587c"
     },
+    "PCICt": {
+      "Package": "PCICt",
+      "Version": "0.5-4.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "fc7fcab917e74a46c3183dd1164aed97"
+    },
     "R6": {
       "Package": "R6",
       "Version": "2.5.1",
@@ -349,6 +356,13 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "ec8ca05cffcc70569eaaad8469d2a3a7"
+    },
+    "exactextractr": {
+      "Package": "exactextractr",
+      "Version": "0.7.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "aec0ad6870602bf4fd42494cac474b67"
     },
     "fansi": {
       "Package": "fansi",
@@ -917,10 +931,16 @@
     },
     "stars": {
       "Package": "stars",
-      "Version": "0.5-4",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "c10644b06dcdd6a20faa383148b1e509"
+      "Version": "0.5-5",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "r-spatial",
+      "RemoteRepo": "stars",
+      "RemoteRef": "main",
+      "RemoteSha": "00834017e19ab0c6599ce08825c13902513421c1",
+      "Remotes": "r-spatial/sf",
+      "Hash": "34bf0850ac804ee2be88829d8a93ec9b"
     },
     "stringi": {
       "Package": "stringi",
