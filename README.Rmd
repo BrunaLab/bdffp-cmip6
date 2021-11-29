@@ -1,0 +1,100 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(knitr)
+```
+
+# heliconia-cmip
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The goal of heliconia-cmip is to download, crop, and spatially aggregate historical and projected climate data from CMIP6 models for an area centered around the Biological Dynamics of Forest Fragments Project (BDFFP).
+
+# Data sources
+
+Original data were downloaded from two sources: The Copernicus data portal (https://cds.climate.copernicus.eu/cdsapp#!/dataset/projections-cmip6) that provides the ability to spatially crop before downloading .nc files and ESGF (https://esgf-node.llnl.gov/search/cmip6/) for combinations of source, experiment, and variable that were not available from Copernicus.  See .csv files in the `metadata/` directory for a list of files that were not available from Copernicus and were consequently downloaded directly from ESGF.
+
+# Data processing overview
+
+After .nc files were downloaded they were roughly cropped to an area containing the Biological Dynamics of Forest Fragments Project (BDFFP).
+
+- xmin: -65ºE
+- xmax: -50ºE
+- ymin: -5ºN
+- ymax: 0ºN
+
+Then values for each variable were aggregated spatially by taking the mean value for a 200km radius circle around the estimated center of BDFFP (-59.833ºE, -2.41ºN).  This aggregation was "exact", meaning it used a weighted mean, weighting raster pixels that were only partially contained in the circle appropriately.
+
+# Column names and units
+
+The finished data are found in the `data/` directory with one .csv file per model (AKA `source_id`) with the following structure:
+
+```{r include=FALSE}
+meta <- structure(
+  list(
+    colname = c(
+      "dir",
+      "source_id",
+      "experiment_id",
+      "time",
+      "hfls",
+      "hfss",
+      "pr",
+      "tas",
+      "tasmin",
+      "tasmax"
+    ),
+    longname = c(
+      "directory",
+      "source ID",
+      "experiment ID",
+      "time",
+      "Surface Upward Latent Heat Flux",
+      "Surface Upward Sensible Heat Flux",
+      "Precipitation",
+      "Near-Surface Air Temperature",
+      "Daily Maximum Near-Surface Air Temperature",
+      "Daily Minimum Near-Surface Air Temperature"
+    ), 
+    type = c(
+      "character",
+      "character",
+      "character",
+      "POSIXct",
+      "numeric",
+      "numeric",
+      "numeric",
+      "numeric",
+      "numeric",
+      "numeric"
+    ),
+    units = c(NA, NA, NA, NA, "W m-2",
+              "W m-2", "kg m-2 s-1", "K", "K", "K")
+  ),
+  row.names = c(NA,-10L),
+  class = "data.frame"
+)
+```
+
+
+```{r echo=FALSE}
+kable(meta)
+```
+
+# Reproducibility
+
+To reproduce download and analysis run the scripts in `R/` sequentially.  Please note that this will take a very long time (possibly 24+ hrs) because of the purposefully slow download script (to avoid bans due to rate limits). Downloads from Copernicus use a modified Python script to access their API loaded into R using the `reticulate` package. This might not work "out of the box", although I think `renv` should be set up to handle the Python dependencies.
+
+# QA/QC
+
+See `data_validation` for a simple data validation report and plots of the raw data.  See also the errata for CMIP6 to check for known issues with particular models, scenarios, and variables (https://errata.es-doc.org/static/index.html)
+
