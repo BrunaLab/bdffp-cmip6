@@ -120,7 +120,7 @@ plot_seasonality <- function(x) {
   df <-
     x %>% 
     # filter(experiment_id == "historical") %>% 
-    filter(time >= ymd("1980-01-01") & time <= ymd("2013-12-31")) %>% 
+    filter(time >= ymd("1980-01-01") & time <= ymd("2015-12-31")) %>% 
     mutate(month = month(time), .after=time) %>% 
     group_by(month) %>% 
     summarize(across(c(pr, tas, tasmin, tasmax), mean, .names = "mean_{.col}")) 
