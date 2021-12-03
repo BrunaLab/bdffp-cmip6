@@ -75,7 +75,7 @@ names(br_day) <- c("pr", "tasmin", "tasmax")
 # calculate mean temperature as mean of tmin and tmax as done in Xavier et al.
 br_day <-
   br_day %>%
-  mutate(across(c(tasmin, tasmax), ~set_units(.x, "degC"))) %>% 
+  mutate(across(c(tasmin, tasmax), ~set_units(.x, "degC"))) %>%
   mutate(tas = (tasmin+tasmax)/2)
 
 # Aggregate spatially ----------------------------------------------
@@ -94,20 +94,25 @@ ggplot() +
 
 br_agg <- 
   br_day %>% 
-  aggregate(by = circle, FUN = mean, join = st_intersects, exact = FALSE)
+  aggregate(
+    by = circle,
+    FUN = mean,
+    join = st_intersects,
+    exact = FALSE
+  )
 
 
 # Aggregate monthly -------------------------------------------------------
 
 #I could do this with aggregate() but then all variables are aggregated with the same function.  I want monthly total precip (sum) and average temperatures (mean), so I'll do it with dplyr.
 
-br_tbl <- 
+br_tbl <-
   br_agg %>%
-  as_tibble() %>% 
-  dplyr::select(-geometry) %>% 
-  mutate(yearmonth = yearmonth(time), .after = time) %>% 
-  group_by(yearmonth) %>% 
-  summarize(pr = sum(pr), across(starts_with("tas"), mean)) %>% 
+  as_tibble() %>%
+  dplyr::select(-geometry) %>%
+  mutate(yearmonth = yearmonth(time), .after = time) %>%
+  group_by(yearmonth) %>%
+  summarize(pr = sum(pr), across(starts_with("tas"), mean)) %>%
   #fix units for pr
   mutate(pr = as_units(as.numeric(pr), "mm/month"))
 
@@ -119,19 +124,25 @@ br_tbl_monthly <-
 
 # Plots -------------------------------------------------------------------
 
-br_prec <- 
-  br_tbl_monthly %>% 
-  ggplot(aes(x = month, y = pr)) + 
+br_prec <-
+  br_tbl_monthly %>%
+  ggplot(aes(x = month, y = pr)) +
   geom_col(fill = "blue") +
-  scale_x_continuous("", breaks = 1:12, labels = ~month(.x, label = TRUE))
+  scale_x_continuous("",
+                     breaks = 1:12,
+                     labels = ~ month(.x, label = TRUE))
 br_prec
 
 br_temp <- 
   br_tbl_monthly %>% 
   ggplot(aes(x = month)) +
-  geom_ribbon(aes(ymin = tasmin, ymax = tasmax), fill = "red", alpha = 0.5) +
+  geom_ribbon(aes(ymin = tasmin, ymax = tasmax),
+              fill = "red",
+              alpha = 0.5) +
   geom_line(aes(y = tas), color = "red") +
-  scale_x_continuous("", breaks = 1:12, labels = ~month(.x, label = TRUE))
+  scale_x_continuous("",
+                     breaks = 1:12,
+                     labels = ~ month(.x, label = TRUE))
 br_temp
 
 season_plot <- 
@@ -141,5 +152,6 @@ season_plot <-
 
 # Save plot and data ------------------------------------------------------
 write_csv(br_tbl, here("data", "xavier_aggregated.csv"))
-ggsave(here("fig", "observed_seasonality.png"), season_plot, width = 5, height = 4)
+ggsave(here("fig", "observed_seasonality.png"),
+       season_plot, width = 5, height = 4)
 
