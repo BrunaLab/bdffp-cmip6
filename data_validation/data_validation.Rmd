@@ -14,6 +14,7 @@ library(tidyverse)
 library(here)
 library(patchwork)
 library(lubridate)
+library(tsibble)
 library(units)
 library(ggforce) #to get ggplot to work with `units`
 theme_set(theme_bw())
@@ -39,14 +40,17 @@ Check that all the corresponding .csv files exist
 
 ```{r validate=TRUE}
 csvs <- list.files(here('data'))
-stop_if_not(!any(!csvs %in% paste0(source_id, "_data.csv")))
+stop_if_not(!any(!paste0(source_id, "_data.csv") %in% csvs))
 ```
 
 
 ```{r read_files, message=FALSE, warning=FALSE, include=FALSE}
 #read in all files
 df_list <-
-  map(list.files(here('data'), full.names = TRUE), read_csv) %>%
+  map(list.files(here('data'),
+                 pattern = "data\\.csv$",
+                 full.names = TRUE),
+      read_csv) %>%
   set_names(map(., ~.x$source_id[1]))
 ```
 
@@ -142,9 +146,34 @@ plot_seasonality <- function(x) {
 
 Data from [Xavier et al. (2016)](https://doi.org/10.1002/joc.4518).
 
+```{r include=FALSE}
+xa <- read_csv(here("data", "xavier_aggregated.csv"))
+xa <- 
+  xa %>%
+  mutate(date = paste(yearmonth, 1) %>% ymd(),
+         month = month(date, label = TRUE)) %>% 
+  group_by(month) %>% summarize(across(c(pr, starts_with("tas")), mean))
+```
+
+```{r correlation, include=FALSE}
+#function to calculate correlation to observed.
+corr_season <- function(x) {
+  df <- x %>% 
+    mutate(month = month(time, label = TRUE)) %>% 
+    group_by(month) %>% 
+    summarize(across(c(pr, starts_with("tas")), mean))
+  tibble(
+    pr = cor(df$pr, xa$pr),
+    tas = cor(df$tas, xa$tas),
+    tasmin = cor(df$tasmin, xa$tasmin),
+    tasmax = cor(df$tasmax, xa$tasmax),
+  ) %>% knitr::kable(digits = 3)
+}
+```
+
 ## Seasonality
 
-```{r}
+```{r echo=FALSE}
 knitr::include_graphics(here("fig", "observed_seasonality.png"))
 ```
 
@@ -165,6 +194,12 @@ plot_all(df_list[[i]])
 plot_seasonality(df_list[[i]])
 ```
 
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
+```
+
 
 
 ```{r echo=FALSE}
@@ -177,10 +212,15 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
 ```
 
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
+```
 
 ```{r echo=FALSE}
 i=3
@@ -192,8 +232,14 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
+```
+
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
 ```
 
 ```{r echo=FALSE}
@@ -206,8 +252,14 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
+```
+
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
 ```
 
 ```{r echo=FALSE}
@@ -220,8 +272,14 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
+```
+
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
 ```
 
 ```{r echo=FALSE}
@@ -234,8 +292,14 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
+```
+
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
 ```
 
 ```{r echo=FALSE}
@@ -248,8 +312,14 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
+```
+
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
 ```
 
 ```{r echo=FALSE}
@@ -262,10 +332,15 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
 ```
 
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
+```
 
 ```{r echo=FALSE}
 i=9
@@ -277,8 +352,14 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
+```
+
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
 ```
 
 ```{r echo=FALSE}
@@ -291,8 +372,14 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
+```
+
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
 ```
 
 ```{r echo=FALSE}
@@ -305,10 +392,15 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
 ```
 
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
+```
 
 ```{r echo=FALSE}
 i=12
@@ -320,8 +412,14 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
+```
+
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
 ```
 
 ```{r echo=FALSE}
@@ -334,10 +432,15 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
 ```
 
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
+```
 ```{r echo=FALSE}
 i=14
 htmltools::h2(names(df_list[i]))
@@ -348,10 +451,15 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
 ```
 
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
+```
 
 ```{r echo=FALSE}
 i=15
@@ -363,10 +471,15 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
 ```
 
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
+```
 
 ```{r echo=FALSE}
 i=16
@@ -378,10 +491,15 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
 ```
 
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
+```
 
 ```{r echo=FALSE}
 i=17
@@ -393,8 +511,14 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
+```
+
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
 ```
 
 ```{r echo=FALSE}
@@ -407,8 +531,14 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
+```
+
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
 ```
 
 ```{r echo=FALSE}
@@ -421,7 +551,12 @@ cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
-```{r}
+```{r echo=FALSE}
 plot_seasonality(df_list[[i]])
 ```
 
+Correlation to observed monthly means:
+
+```{r echo=FALSE}
+corr_season(df_list[[i]])
+```
