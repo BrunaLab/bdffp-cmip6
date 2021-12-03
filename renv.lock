@@ -13,6 +13,13 @@
     "Type": "virtualenv"
   },
   "Packages": {
+    "BH": {
+      "Package": "BH",
+      "Version": "1.75.0-0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "e4c04affc2cac20c8fec18385cd14691"
+    },
     "ClimateOperators": {
       "Package": "ClimateOperators",
       "Version": "0.3.2",
@@ -95,12 +102,26 @@
       "Repository": "CRAN",
       "Hash": "dab19adae4440ae55aa8a9d238b246bb"
     },
+    "RcppEigen": {
+      "Package": "RcppEigen",
+      "Version": "0.3.3.9.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "ddfa72a87fdf4c80466a20818be91d00"
+    },
     "abind": {
       "Package": "abind",
       "Version": "1.4-5",
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "4f57884290cc75ab22f4af9e9d4ca862"
+    },
+    "anytime": {
+      "Package": "anytime",
+      "Version": "0.3.9",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "74a64813f17b492da9c6afda6b128e3d"
     },
     "askpass": {
       "Package": "askpass",
@@ -445,6 +466,13 @@
       "Repository": "CRAN",
       "Hash": "07a91f99e56951818ab911366db77700"
     },
+    "ggforce": {
+      "Package": "ggforce",
+      "Version": "0.3.3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "4c64a588b497f8c088e1d308ddd40bc6"
+    },
     "ggplot2": {
       "Package": "ggplot2",
       "Version": "3.3.5",
@@ -730,6 +758,13 @@
       "RemoteSha": "97d4bf5b2d2d59c606588e63c7f2c852317ca88d",
       "Hash": "037226f4fb9c28d5dfddcaf327e608e7"
     },
+    "polyclip": {
+      "Package": "polyclip",
+      "Version": "1.10-0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "cb167f328b3ada4ec5cf67a7df4c900a"
+    },
     "praise": {
       "Package": "praise",
       "Version": "1.0.0",
@@ -942,9 +977,9 @@
       "RemoteUsername": "r-spatial",
       "RemoteRepo": "stars",
       "RemoteRef": "main",
-      "RemoteSha": "00834017e19ab0c6599ce08825c13902513421c1",
+      "RemoteSha": "b5d3587ea849e432472d7ec37eceb64728d17e3d",
       "Remotes": "r-spatial/sf",
-      "Hash": "34bf0850ac804ee2be88829d8a93ec9b"
+      "Hash": "7414fa4503632495b1416b3cf58621fe"
     },
     "stringi": {
       "Package": "stringi",
@@ -1008,6 +1043,20 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "1d7220fe46159fb9f5c99a44354a2bff"
+    },
+    "tsibble": {
+      "Package": "tsibble",
+      "Version": "1.1.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "4862a53145a55aa72d06287657c610bb"
+    },
+    "tweenr": {
+      "Package": "tweenr",
+      "Version": "1.0.2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "6cc663f970a529dbf776f11d5bcd1a2e"
     },
     "tzdb": {
       "Package": "tzdb",
