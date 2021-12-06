@@ -55,6 +55,31 @@ df_list <-
   set_names(map(., ~.x$source_id[1]))
 ```
 
+```{r include=FALSE}
+#filter so timespan is consistent
+df_list <- 
+  df_list %>% map(~{
+    .x %>% 
+      filter((
+        experiment_id == "historical" &
+          between(
+            time,
+            ymd_hms("1850-01-01 12:00:00"),
+            ymd_hms("2014-12-31 12:00:00")
+          )
+      ) |
+        (
+          experiment_id != "historical" &
+            between(
+              time,
+              ymd_hms("2015-01-01 12:00:00"),
+              ymd_hms("2100-12-31 12:00:00")
+            )
+        ))
+    
+  })
+```
+
 ```{r convert, include=FALSE}
 water_density <- as_units(1000, "kg m-3")
 convert_units <- function(x) {
@@ -286,24 +311,10 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
+
+
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
 ```
@@ -332,23 +343,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -377,23 +371,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -422,23 +399,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -467,23 +427,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -512,23 +455,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -557,23 +483,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -602,23 +511,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -647,23 +539,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -692,23 +567,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -737,23 +595,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -782,23 +623,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -827,23 +651,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -872,23 +679,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -917,23 +707,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -962,23 +735,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -1008,23 +764,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -1054,23 +793,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -1100,23 +822,6 @@ htmltools::h2(names(df_list[i]))
     label = "no missing values"
   )
   col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
-  col_is_posix(df_list[[i]], time)
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  )
-  col_vals_between(
-    df_list[[i]],
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
