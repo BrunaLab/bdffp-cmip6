@@ -25,6 +25,28 @@ downloaded directly from ESGF. There were a few that didn’t download
 using the scripts in `R/` and I had to download manually and then crop
 using the `R/manual_crop.R`.
 
+Observed historical data used for validation of CMIP6 models was
+provided by [Xavier et al. (2016)](https://doi.org/10.1002/joc.4518).
+The raw data files are accessed through
+<http://careyking.com/data-downloads/> (direct link:
+<https://utexas.app.box.com/v/Xavier-etal-IJOC-DATA>). The following
+files were downloaded to `/data_raw/Xavier/`
+
+    #>  [1] "prec_daily_UT_Brazil_v2.2_19800101_19891231.nc" 
+    #>  [2] "prec_daily_UT_Brazil_v2.2_19900101_19991231.nc" 
+    #>  [3] "prec_daily_UT_Brazil_v2.2_20000101_20091231.nc" 
+    #>  [4] "prec_daily_UT_Brazil_v2.2_20100101_20151231.nc" 
+    #>  [5] "Tmax_daily_UT_Brazil_v2_19800101_19891231.nc"   
+    #>  [6] "Tmax_daily_UT_Brazil_v2_19900101_19991231.nc"   
+    #>  [7] "Tmax_daily_UT_Brazil_v2_20000101_20061231.nc"   
+    #>  [8] "Tmax_daily_UT_Brazil_v2_20070101_20131231.nc"   
+    #>  [9] "Tmax_daily_UT_Brazil_v2_20140101_20170731_s1.nc"
+    #> [10] "Tmin_daily_UT_Brazil_v2_19800101_19891231.nc"   
+    #> [11] "Tmin_daily_UT_Brazil_v2_19900101_19991231.nc"   
+    #> [12] "Tmin_daily_UT_Brazil_v2_20000101_20061231.nc"   
+    #> [13] "Tmin_daily_UT_Brazil_v2_20070101_20131231.nc"   
+    #> [14] "Tmin_daily_UT_Brazil_v2_20140101_20170731_s1.nc"
+
 # Data processing overview
 
 After .nc files were downloaded they were roughly cropped to an area

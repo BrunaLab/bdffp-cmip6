@@ -23,6 +23,13 @@ The goal of heliconia-cmip is to download, crop, and spatially aggregate histori
 
 Original data were downloaded from two sources: The Copernicus data portal (https://cds.climate.copernicus.eu/cdsapp#!/dataset/projections-cmip6) that provides the ability to spatially crop before downloading .nc files and ESGF (https://esgf-node.llnl.gov/search/cmip6/) for combinations of source, experiment, and variable that were not available from Copernicus.  See .csv files in the `metadata/` directory for a list of files that were not available from Copernicus and were consequently downloaded directly from ESGF.  There were a few that didn't download using the scripts in `R/` and I had to download manually and then crop using the `R/manual_crop.R`.
 
+Observed historical data used for validation of CMIP6 models was provided by [Xavier et al. (2016)](https://doi.org/10.1002/joc.4518). The raw data files are accessed through http://careyking.com/data-downloads/ (direct link: https://utexas.app.box.com/v/Xavier-etal-IJOC-DATA).  The following files were downloaded to `/data_raw/Xavier/`
+
+```{r echo=FALSE}
+list.files(here::here("data_raw", "Xavier"), pattern = ".nc$")
+```
+
+
 # Data processing overview
 
 After .nc files were downloaded they were roughly cropped to an area containing the Biological Dynamics of Forest Fragments Project (BDFFP).
