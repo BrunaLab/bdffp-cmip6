@@ -32,7 +32,7 @@ idx <- read_csv(here("metadata", "cmip6_index.csv"))
 Check that all the directories for the .nc files got made
 
 ```{r validate=TRUE}
-source_dl <- dir(here("data_raw"))
+source_dl <- dir(here("data_raw", "CMIP6"))
 source_id <- idx$source_id %>% unique() %>% str_to_lower() %>% str_replace_all("-", "_")
 stop_if_not(!any(!source_id %in% source_dl))
 ```
@@ -70,38 +70,6 @@ convert_units <- function(x) {
     select(-d_per_mon)
 }
 df_list <- map(df_list, convert_units)
-```
-
-
-```{r agent, include=FALSE}
-#set default action levels very strict
-al <- action_levels(warn_at = 0.01, stop_at = 0.1)
-#create pointblank agent
-cmip_agent <- 
-  df_list[[1]] %>% 
-  create_agent(actions = al) %>% 
-  col_exists(c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-             label = "all variables exist") %>%
-  col_vals_make_set(experiment_id, c("historical", "ssp126", "ssp245", "ssp585"),
-                    label = "all scenarios exist") %>% 
-  col_vals_not_null(vars(hfls, hfss, tas, tasmin, tasmax, pr),
-                    actions = action_levels(stop_at = 1),
-                    label = "no missing values") %>% 
-  col_is_posix(time) %>%
-  col_vals_between(
-    time,
-    ymd_hms("1850-01-01 12:00:00"),
-    ymd_hms("2014-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id == "historical"),
-    label = "full time series"
-  ) %>%
-  col_vals_between(
-    time,
-    ymd_hms("2015-01-01 12:00:00"),
-    ymd_hms("2100-12-31 12:00:00"),
-    preconditions = ~ . %>% filter(experiment_id != "historical"),
-    label = "full time series"
-  )
 ```
 
 
@@ -301,7 +269,40 @@ i=1
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -314,7 +315,40 @@ i=2
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -326,7 +360,40 @@ i=3
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -338,7 +405,40 @@ i=4
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -350,7 +450,40 @@ i=5
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -362,7 +495,40 @@ i=6
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -374,7 +540,40 @@ i=7
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -386,7 +585,40 @@ i=8
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -398,7 +630,40 @@ i=9
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -410,7 +675,40 @@ i=10
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -422,7 +720,40 @@ i=11
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -434,7 +765,40 @@ i=12
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -446,7 +810,40 @@ i=13
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -458,7 +855,40 @@ i=14
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -470,7 +900,40 @@ i=15
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -482,7 +945,40 @@ i=16
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -495,7 +991,40 @@ i=17
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -508,7 +1037,40 @@ i=18
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -521,7 +1083,40 @@ i=19
 htmltools::h2(names(df_list[i]))
 ```
 ```{r validate=TRUE}
-cmip_agent %>% set_tbl(df_list[[i]]) %>% interrogate()
+  col_exists(
+    df_list[[i]],
+    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
+    label = "all variables exist"
+    ) 
+  col_vals_make_set(
+    df_list[[i]],
+    experiment_id,
+    c("historical", "ssp126", "ssp245", "ssp585"),
+    label = "all scenarios exist"
+  )
+  col_vals_not_null(
+    df_list[[i]],
+    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    label = "no missing values"
+  )
+  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_is_posix(df_list[[i]], time)
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("1850-01-01 12:00:00"),
+    ymd_hms("2014-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id == "historical"),
+    label = "full time series"
+  )
+  col_vals_between(
+    df_list[[i]],
+    time,
+    ymd_hms("2015-01-01 12:00:00"),
+    ymd_hms("2100-12-31 12:00:00"),
+    preconditions = ~ . %>% filter(experiment_id != "historical"),
+    label = "full time series"
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
