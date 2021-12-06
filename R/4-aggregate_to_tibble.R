@@ -55,7 +55,7 @@ agg_to_tibble <- function(stars_scenario, by) {
 
 # read in .nc files, aggregate spatially, combine all scenarios into a tibble, and write to .csv file.
 aggregate_write <- function(source_id, by) {
-  dirs_to_map <- dir(here("data_raw", source_id), full.names = TRUE)
+  dirs_to_map <- dir(here("data_raw", "CMIP6", source_id), full.names = TRUE)
   print("cropping")
   out_df <-
     dirs_to_map %>% 
@@ -77,6 +77,6 @@ aggregate_write <- function(source_id, by) {
 
 # do the aggregate_write() function for all sources
 
-sources <- dir(here("data_raw"))
+sources <- dir(here("data_raw", "CMIP6"))
 #TODO: skip empty directories to avoid errors.
 walk(sources, ~aggregate_write(.x, by = circle))

@@ -55,6 +55,7 @@ dl_df <- idx %>%
   # Create download paths and file names
   mutate(dir = here(
     "data_raw",
+    "CMIP6",
     source_id,
     experiment_id),
     file_name = glue("{variable_id}_{experiment_id}_{source_id}.zip"),
