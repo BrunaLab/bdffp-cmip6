@@ -196,10 +196,12 @@ plots <-
 table_rough <-
   season_df %>%
   group_by(source_id) %>%
-  summarize(pr_cor = cor(mean_pr, xa$pr),
-            tas_cor = cor(mean_tas, xa$tas),
-            tasmin_cor = cor(mean_tasmin, xa$tasmin),
-            tasmax_cor = cor(mean_tasmax, xa$tasmax)) %>%
+  summarize(
+    pr_cor = cor(mean_pr, xa$pr, method = "spearman"),
+    tas_cor = cor(mean_tas, xa$tas, method = "spearman"),
+    tasmin_cor = cor(mean_tasmin, xa$tasmin, method = "spearman"),
+    tasmax_cor = cor(mean_tasmax, xa$tasmax, method = "spearman")
+  ) %>%
   #make columns for plots to go eventually
   mutate(pr_plot = NA) %>%
   mutate(tas_plot = NA) %>% 
@@ -237,7 +239,7 @@ table_rough %>%
     ),
     locations = cells_body(
       columns = pr_cor,
-      rows = pr_cor < 0.5
+      rows = pr_cor < 0.45
     )
   ) %>% 
     tab_style(
@@ -246,7 +248,7 @@ table_rough %>%
     ),
     locations = cells_body(
       columns = tas_cor,
-      rows = tas_cor < 0.5
+      rows = tas_cor < 0.45
     )
   )  %>% 
   tab_style(
@@ -255,7 +257,7 @@ table_rough %>%
     ),
     locations = cells_body(
       columns = tasmin_cor,
-      rows = tasmin_cor < 0.5
+      rows = tasmin_cor < 0.45
     )
   ) %>% 
     tab_style(
@@ -264,10 +266,11 @@ table_rough %>%
     ),
     locations = cells_body(
       columns = tasmax_cor,
-      rows = tasmax_cor < 0.5
+      rows = tasmax_cor < 0.45
     )
   ) %>% 
-  tab_spanner("Correlation to observed", ends_with("cor")) %>% 
+  tab_spanner("Correlation to observed", 
+              id = "cor", columns = ends_with("cor")) %>% 
   tab_spanner("Seasonality", ends_with("_plot")) %>% 
   cols_label(
     source_id = "Source",
@@ -278,10 +281,14 @@ table_rough %>%
     pr_plot = "precipitation",
     tas_plot = "temperature"
   ) %>% 
-  tab_source_note(
-    source_note = md(
-      "Observed data from [Xavier et al. (2016)](https://doi.org/10.1002/joc.4518)")
-  )
+  tab_footnote(
+    md("Observed data from [Xavier et al. (2016)](https://doi.org/10.1002/joc.4518)"),
+    cells_body(
+      columns = source_id,
+      rows = source_id == "Observed"
+    )
+  ) %>% 
+  tab_footnote("Spearman's rho. Rho < 0.45 highlighted in red.", cells_column_spanners("cor"))
 ```
 
 
@@ -307,10 +314,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 
 
@@ -339,10 +358,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -367,10 +398,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -395,10 +438,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -423,10 +478,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -451,10 +518,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -479,10 +558,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -507,10 +598,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -535,10 +638,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -563,10 +678,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -591,10 +718,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -619,10 +758,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -647,10 +798,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -675,10 +838,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -703,10 +878,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -731,10 +918,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -760,10 +959,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -789,10 +1000,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
@@ -818,10 +1041,22 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_not_null(
     df_list[[i]],
-    vars(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, tasmin, tasmax, pr),
     label = "no missing values"
   )
-  col_vals_expr(df_list[[i]], ~max(.$pr) > as_units(200, "mm/month"))
+  col_vals_expr(
+    df_list[[i]],
+    ~max(.$pr) > as_units(200, "mm/month"),
+    label = "precipitation is reasonable"
+  )
+  col_vals_between(
+    df_list[[i]],
+    c(tas, tasmin, tasmax),
+    10,
+    55,
+    label = "temperature is reasonable",
+    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+  )
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_all(df_list[[i]])
