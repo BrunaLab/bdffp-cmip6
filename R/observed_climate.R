@@ -5,6 +5,26 @@
 #'
 #'Actual data available at https://utexas.app.box.com/v/Xavier-etal-IJOC-DATA/folder/4247252285
 #'
+#'Files downloaded into data_raw/:
+#' - ETo_daily_UT_Brazil_v2_19800101_19891231.nc
+#' - ETo_daily_UT_Brazil_v2_19900101_19991231.nc
+#' - ETo_daily_UT_Brazil_v2_20000101_20061231.nc
+#' - ETo_daily_UT_Brazil_v2_20070101_20131231.nc
+#' - ETo_daily_UT_Brazil_v2_20140101_20170731_s1.nc
+#' - prec_daily_UT_Brazil_v2.2_19800101_19891231.nc
+#' - prec_daily_UT_Brazil_v2.2_19900101_19991231.nc
+#' - prec_daily_UT_Brazil_v2.2_20000101_20091231.nc
+#' - prec_daily_UT_Brazil_v2.2_20100101_20151231.nc
+#' - Tmax_daily_UT_Brazil_v2_19800101_19891231.nc
+#' - Tmax_daily_UT_Brazil_v2_19900101_19991231.nc
+#' - Tmax_daily_UT_Brazil_v2_20000101_20061231.nc
+#' - Tmax_daily_UT_Brazil_v2_20070101_20131231.nc
+#' - Tmax_daily_UT_Brazil_v2_20140101_20170731_s1.nc
+#' - Tmin_daily_UT_Brazil_v2_19800101_19891231.nc
+#' - Tmin_daily_UT_Brazil_v2_19900101_19991231.nc
+#' - Tmin_daily_UT_Brazil_v2_20000101_20061231.nc
+#' - Tmin_daily_UT_Brazil_v2_20070101_20131231.nc
+#' - Tmin_daily_UT_Brazil_v2_20140101_20170731_s1.nc
 
 # Load packages -----------------------------------------------------------
 
