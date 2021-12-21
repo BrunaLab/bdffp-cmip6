@@ -113,7 +113,7 @@ ggplot() +
   geom_sf(data = circle, fill = NA, color = "red")
 
 
-br_agg <- 
+bdffp <- 
   br_day %>% 
   aggregate(
     by = circle,
@@ -127,8 +127,8 @@ br_agg <-
 
 #I could do this with aggregate() but then all variables are aggregated with the same function.  I want monthly total precip (sum) and average temperatures (mean), so I'll do it with dplyr.
 
-br_tbl <-
-  br_agg %>%
+bdffp_tbl <-
+  bdffp %>%
   as_tibble() %>%
   dplyr::select(-geometry) %>%
   mutate(yearmonth = yearmonth(time), .after = time) %>%
@@ -137,25 +137,26 @@ br_tbl <-
   #fix units for pr and eto
   mutate(across(c(pr, eto), ~ as_units(as.numeric(.x), "mm/month")))
 
-br_tbl_monthly <- 
-  br_tbl %>% 
+
+# Plots -------------------------------------------------------------------
+
+bdffp_means <- 
+  bdffp_tbl %>% 
   mutate(month = month(yearmonth)) %>% 
   group_by(month) %>% 
   summarize(across(c(pr, eto, starts_with("tas")), mean))
 
-# Plots -------------------------------------------------------------------
-
-br_prec <-
-  br_tbl_monthly %>%
+prec <-
+  bdffp_means %>%
   ggplot(aes(x = month, y = pr)) +
   geom_col(fill = "blue") +
   scale_x_continuous("",
                      breaks = 1:12,
                      labels = ~ month(.x, label = TRUE))
-br_prec
+prec
 
-br_temp <- 
-  br_tbl_monthly %>% 
+temp <- 
+  bdffp_means %>% 
   ggplot(aes(x = month)) +
   geom_ribbon(aes(ymin = tasmin, ymax = tasmax),
               fill = "red",
@@ -164,15 +165,15 @@ br_temp <-
   scale_x_continuous("",
                      breaks = 1:12,
                      labels = ~ month(.x, label = TRUE))
-br_temp
+temp
 
 season_plot <- 
-  br_prec/br_temp +
+  prec/temp +
   plot_annotation(title = "Observed", subtitle = "1980–2015")
 
 
 # Save plot and data ------------------------------------------------------
-write_csv(br_tbl, here("data", "xavier_aggregated.csv"))
+write_csv(bdffp_tbl, here("data", "xavier_aggregated.csv"))
 ggsave(here("fig", "observed_seasonality.png"),
        season_plot, width = 5, height = 4)
 
