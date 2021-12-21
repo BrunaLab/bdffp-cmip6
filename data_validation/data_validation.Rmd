@@ -85,7 +85,7 @@ water_density <- as_units(1000, "kg m-3")
 convert_units <- function(x) {
   x  %>% 
     #set units
-    mutate(across(c(hfls ,hfss), ~set_units(.x, "W m-2")),
+    mutate(across(c(hfls, hfss), ~set_units(.x, "W m-2")),
            across(starts_with("tas"), ~set_units(.x, "K")),
            pr = set_units(pr, "kg m-2 s-1")) %>% 
     #do unit conversions
@@ -97,11 +97,45 @@ convert_units <- function(x) {
 df_list <- map(df_list, convert_units)
 ```
 
+# Calculations
+
+Perform necessary calculations to compare PET and SPEI among models and between models and observed.
+
+For PET, I'm using the "energy-only" method proposed by Milly and Dune (2016) eq. 8:
+
+$$
+PET = 0.8(R_n - G)
+$$
+
+Except that in their notes, they estimate $R_n -G$ as `hfls` + `hfss` after converting to units of mm/day using the latent heat of vaporazation of water, given by their eq. 2:
+
+$$
+L_v(T) = 2.501 - 0.002361T
+$$
+in MJ/kg
+
+```{r pet, include=FALSE}
+pet_energy_only <- function(hfls, hfss, tas) {
+  water_density <- as_units(1000, "kg m-3")
+  #latent heat of vaporization of water at temp T
+  tas <- set_units(tas, "degC") #just checks that units are in ºC
+  Lv <- (2.501 - 0.002361 * as.numeric(tas)) %>% set_units("MJ/kg")
+  hfls_mmd <- (hfls / Lv / water_density) %>% set_units("mm/day")
+  hfss_mmd <- (hfss / Lv / water_density) %>% set_units("mm/day")
+  #PET
+  0.8 * (hfls_mmd + hfss_mmd)
+}
+
+df_list <- 
+  df_list %>%
+  map(~ .x %>% mutate(pet = pet_energy_only(hfls, hfss, tas)))
+```
+
 
 ```{r plot_fun, include=FALSE}
 # Function to plot data
 plot_all <- function(data) {
-  p_list <- map(c("tas", "tasmin", "tasmax", "pr", "hfls", "hfss"),
+  p_list <- map(c("tas", "tasmin", "tasmax", "pr", "hfls", "hfss", "pet"),
       ~ggplot(data,
               aes_string(x = "time", y = .x, color = "experiment_id")) +
         geom_line(alpha = 0.5) + 
