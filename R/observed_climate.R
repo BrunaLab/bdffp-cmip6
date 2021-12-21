@@ -3,16 +3,8 @@
 #'in Brazil (1980–2013). International Journal of Climatology 36:2644–2659.
 #'https://doi.org/10.1002/joc.4518
 #'
-#'Actual data available at https://utexas.app.box.com/v/Xavier-etal-IJOC-DATA/folder/40983701074
+#'Actual data available at https://utexas.app.box.com/v/Xavier-etal-IJOC-DATA/folder/4247252285
 #'
-#'TODO: If I want to plot average temperature, I'd need to load the daily data
-#'and calculate it as the average of Tmin and Tmax, then aggregate monthly.
-#'There is no monthly mean temp file and this is how it was done in the paper
-#'
-#'If I start with daily data for all, I can also make some nice boxplots that
-#'show the range of values expected which would be good for comparing to the
-#'CMIP6 timeseries plots.
-
 
 # Load packages -----------------------------------------------------------
 
@@ -56,21 +48,30 @@ tasmax_day <-
     pattern = "Tmax_",
     full.names = TRUE
   ), proxy = FALSE)
+eto_day <-
+  read_stars(list.files(
+    here("data_raw", "Xavier", "cropped"),
+    pattern = "ETo_",
+    full.names = TRUE
+  ), proxy = FALSE)
+
 
 #precip has shorter time dimension, and different format (ymd_hms)
 tasmin_day <- tasmin_day[,,,1:13149]
 tasmax_day <- tasmax_day[,,,1:13149]
+eto_day    <- eto_day[,,,1:13149]
 
 st_dimensions(tasmax_day) <- st_dimensions(pr_day)
 st_dimensions(tasmin_day) <- st_dimensions(pr_day)
+st_dimensions(eto_day) <- st_dimensions(pr_day)
 # combine and set CRS
 br_day <- 
-  c(pr_day, tasmin_day, tasmax_day) %>%
+  c(pr_day, tasmin_day, tasmax_day, eto_day) %>%
   st_set_crs("WGS84")
 
-rm(pr_day, tasmin_day, tasmax_day)
+rm(pr_day, tasmin_day, tasmax_day, eto_day)
 # set attribute names
-names(br_day) <- c("pr", "tasmin", "tasmax")
+names(br_day) <- c("pr", "tasmin", "tasmax", "eto")
 
 # calculate mean temperature as mean of tmin and tmax as done in Xavier et al.
 br_day <-
@@ -112,15 +113,15 @@ br_tbl <-
   dplyr::select(-geometry) %>%
   mutate(yearmonth = yearmonth(time), .after = time) %>%
   group_by(yearmonth) %>%
-  summarize(pr = sum(pr), across(starts_with("tas"), mean)) %>%
-  #fix units for pr
-  mutate(pr = as_units(as.numeric(pr), "mm/month"))
+  summarize(across(c(pr, eto), sum), across(starts_with("tas"), mean)) %>%
+  #fix units for pr and eto
+  mutate(across(c(pr, eto), ~ as_units(as.numeric(.x), "mm/month")))
 
 br_tbl_monthly <- 
   br_tbl %>% 
   mutate(month = month(yearmonth)) %>% 
   group_by(month) %>% 
-  summarize(across(c(pr, starts_with("tas")), mean))
+  summarize(across(c(pr, eto, starts_with("tas")), mean))
 
 # Plots -------------------------------------------------------------------
 
