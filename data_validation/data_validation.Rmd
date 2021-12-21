@@ -18,6 +18,7 @@ library(tsibble)
 library(units)
 library(ggforce) #to get ggplot to work with `units`
 library(gt)
+library(SPEI)
 theme_set(theme_bw())
 # Use `validate_rmd()` here to set options for the
 # pointblank validation workflow within R Markdown documents
@@ -46,13 +47,24 @@ stop_if_not(!any(!paste0(source_id, "_data.csv") %in% csvs))
 
 
 ```{r read_files, message=FALSE, warning=FALSE, include=FALSE}
-#read in all files
+#read in all files for CMIP6
 df_list <-
   map(list.files(here('data'),
                  pattern = "data\\.csv$",
                  full.names = TRUE),
       read_csv) %>%
   set_names(map(., ~.x$source_id[1]))
+
+# observed data
+xa_raw <- read_csv(here("data", "xavier_aggregated.csv"))
+xa <- 
+  xa_raw %>%
+  mutate(date = paste(yearmonth, 1) %>% ymd(),
+         month = month(date, label = TRUE)) %>% 
+  group_by(month) %>%
+  summarize(across(c(pr, starts_with("tas")), mean)) %>%
+  mutate(pr = set_units(pr, "mm/month"),
+         across(starts_with("tas"), ~set_units(.x, "degC")))
 ```
 
 ```{r include=FALSE}
@@ -128,14 +140,57 @@ pet_energy_only <- function(hfls, hfss, tas) {
 
 df_list <- 
   df_list %>%
-  map(~ .x %>% mutate(pet = pet_energy_only(hfls, hfss, tas)))
+  map(~ .x %>% mutate(pet = pet_energy_only(hfls, hfss, tas))) %>% 
+  #convert PET to mm/month
+  map(~.x %>%
+        mutate(pet = pet * set_units(days_in_month(time), "d/month"),
+               cb = pr - pet)
+  )
 ```
+
+
+```{r spei, include=FALSE}
+# For each scenario, need a timeseries including "historical".  Then calc SPEI using historical as reference period, and re-join into one dataset.  Might be a better workflow for this with grouping or something.
+
+calc_spei <- function(x, scale = 3, ref_period = c("observed", "historical")){
+  ref_period <- match.arg(ref_period)
+  if (ref_period == "observed") {
+    ref_start <- c(1980, 4)
+    ref_end <- c(2014, 12) #not quite the end, but doesn't overlap with ssp projections
+  } else {
+    ref_start <- c(1850, 1)
+    ref_end <- c(2014, 12)
+  }
+  
+  #split into three dfs and calculate spei
+  spei_done <-
+    c("ssp126", "ssp245", "ssp585") %>% 
+    map(~ x %>% filter(experiment_id %in% c("historical", .x)) %>% arrange(time)) %>% 
+    map(~ .x %>%
+          mutate(spei = as.numeric(
+            spei(
+              ts(cb, freq = 12, start = c(year(min(time)), month(min(time)))),
+              scale = scale,
+              ref.start = ref_start,
+              ref.end = ref_end
+            )$fitted
+          )))
+  
+  #recombine and deduplicate historical
+  bind_rows(spei_done) %>% distinct()
+}
+
+df_list <- 
+  df_list %>%
+  map(calc_spei)
+```
+
 
 
 ```{r plot_fun, include=FALSE}
 # Function to plot data
 plot_all <- function(data) {
-  p_list <- map(c("tas", "tasmin", "tasmax", "pr", "hfls", "hfss", "pet"),
+  p_list <- map(c("tas", "tasmin", "tasmax", "pr", "hfls", "hfss", "pet", "spei"),
       ~ggplot(data,
               aes_string(x = "time", y = .x, color = "experiment_id")) +
         geom_line(alpha = 0.5) + 
@@ -146,19 +201,6 @@ plot_all <- function(data) {
 }
 ```
 
-
-
-```{r include=FALSE}
-xa_raw <- read_csv(here("data", "xavier_aggregated.csv"))
-xa <- 
-  xa_raw %>%
-  mutate(date = paste(yearmonth, 1) %>% ymd(),
-         month = month(date, label = TRUE)) %>% 
-  group_by(month) %>%
-  summarize(across(c(pr, starts_with("tas")), mean)) %>%
-  mutate(pr = set_units(pr, "mm/month"),
-         across(starts_with("tas"), ~set_units(.x, "degC")))
-```
 
 
 
