@@ -13,8 +13,12 @@ bibliography: references.bib
     [more].
     The Coupled Model Intercomparison Project (CMIP) provides specific starting conditions and "experiments" for these GCMs to run.
     CMIP is now in its 6th iteration, corresponding with the 6th report of the IPCC.
-    The "experiments" correspond to SSPs laid out in the IPCC's 6th report with scenarios ranging from very optimistic elimination of fossil fuel consumption and carbon capture technologies with strong international cooperation resulting in only \_\_\_ ºC average global warming by 2100, to expansion of fascism and nationalism and increasing investment in fossil fuel technologies resulting in a \_\_ºC rise in global temperatures by 2100.
-    Climatologist use these models ... [what do they use them for].
+    The "experiments" correspond to shared socioeconomic pathways (SSPs) laid out in the IPCC's 6th report.
+    These SSPs differ from the representative concentration pathways (RCPs) used in the previous IPPC report and in CMIP5 models in that they consider a range of global socioeconomic possibilities ranging from very optimistic elimination of fossil fuel consumption and carbon capture technologies with strong international cooperation, to expansion of fascism and nationalism, continued investment in fossil fuel technologies, and increasing global inequality.
+    These scenarios are then combined with "forcings" comparable to the RCPs of CMIP5.
+    Four combinations of SSPs and radiative forcing levels were decided upon as standard across the model intercomparison project: SSP126, SSP245, SSP370, and SSP585.
+    <!--# in box, explain that SSP126 is actually SSP1 (sustainable, reduced inequality) with a 2.6 Wm-1 forcing level -->.
+
     Something about spatial nature and resolution.
     Something about uncertainty [ecologists will think pixel-to-pixel variation is 'made up' (and maybe it is to some extent)].
     How to use uncertainty within and among models to your advantage?
@@ -39,14 +43,15 @@ Understanding CMIP models
 1.  Accessing data, downloading it
 
 -   portals that pre-compute things
--   original data portal
+-   Some portals allow download of multi-model means, but you might want to do that yourself, since some models may be inappropriate for your particular region (discussion below).
+-   ESGF portal
 -   programmatic access
 -   helpful R (and python?) packages
 
 2.  Spatial aggregation
 
 -   not all models on same spatial scale, so may require re-gridding or downscaling
--   if interested in local "point" estimate, how to aggregate?
+-   If you're interested in a timeseries for your region, without spatial variation, you will need to aggregate the data spatially
 -   even if interested in a larger region, aggregation may be useful to simplify quality control (discussed below)
 
 3.  Model quality control
