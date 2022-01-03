@@ -1,0 +1,62 @@
+---
+title: "Using global climate model outputs for ecological forecasting at a local scale"
+author: "Eric R. Scott"
+date: "1/3/2022"
+output: bookdown::word_document2
+bibliography: references.bib
+---
+
+# Introduction
+
+1.  What are these climate models?
+    General circulation models (GCMs) model the Earth's climate by modeling ocean, atmospheric, and land as coupled systems.
+    [more].
+    The Coupled Model Intercomparison Project (CMIP) provides specific starting conditions and "experiments" for these GCMs to run.
+    CMIP is now in its 6th iteration, corresponding with the 6th report of the IPCC.
+    The "experiments" correspond to SSPs laid out in the IPCC's 6th report with scenarios ranging from very optimistic elimination of fossil fuel consumption and carbon capture technologies with strong international cooperation resulting in only \_\_\_ ºC average global warming by 2100, to expansion of fascism and nationalism and increasing investment in fossil fuel technologies resulting in a \_\_ºC rise in global temperatures by 2100.
+    Climatologist use these models ... [what do they use them for].
+    Something about spatial nature and resolution.
+    Something about uncertainty [ecologists will think pixel-to-pixel variation is 'made up' (and maybe it is to some extent)].
+    How to use uncertainty within and among models to your advantage?
+
+2.  Why should ecologists be interested?
+    Ecologists and global change biologists are often interested in the impacts of climate change on natural systems [cite some study about increase in climate change biology over time].
+
+Experiments: scientists devise experiments to test the effects of various aspects of climate change such as warming [citation], drought [citation], or rising CO2 [FACE study], or some combination of variables [BACE, others].
+The levels of these variables may be determined from literature that is informed by CMIP or other GCM predictions, but often the treatments are "rough" and correspond to continental or global scale patterns (e.g. 50% and 25% rainfall reduction; 1º, 2º, 3º C warming above ambient).
+\_\_\_ proposes using model output data from sources such as CMIP6 to obtain more precise predictions.
+They describe an experimental setup using exactly the daily predicted precipitation from a multi-model mean output to water their plants.
+By using outputs from two scenarios, they are able to ask questions about the impacts of climate change on a very local level.
+Ecological forecasting: ....
+
+Difficulties:
+
+0.
+Understanding CMIP models
+
+-   box1 for vocab: "experiment", "run", "source", etc.
+
+1.  Accessing data, downloading it
+
+-   portals that pre-compute things
+-   original data portal
+-   programmatic access
+-   helpful R (and python?) packages
+
+2.  Spatial aggregation
+
+-   not all models on same spatial scale, so may require re-gridding or downscaling
+-   if interested in local "point" estimate, how to aggregate?
+-   even if interested in a larger region, aggregation may be useful to simplify quality control (discussed below)
+
+3.  Model quality control
+
+-   models have errors (link to error database)
+-   even if not "errors", some models may be unrealistic for your region
+-   compare observed data to "historical" experiments. Know that "historical" is not meant to be accurate to the day, but patterns like seasonality and \#of droughts should be captured accurately at a decadal scale.
+-   plots to make, stats to calculate
+
+4.  Sources of uncertainty (maybe not necessary since I don't really know what I'm talking about here yet)
+
+-   Some researchers have used the uncertainty among CMIP models as an estimate of climate uncertainty [@duffyProjectionsFutureMeteorological2015].
+-   Could also use spatial uncertainty?? (like if you aggregate a mean of a region, you can also get SD from it?)
