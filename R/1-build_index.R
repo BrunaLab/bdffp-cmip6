@@ -17,10 +17,11 @@ hist <- esgf_query(
   ungroup()
 
 
-hist_incomp <- hist %>% 
+hist_incomp <-
+  hist %>% 
   group_by(source_id) %>% 
   summarize(n_var = length(unique(variable_id))) %>%  #should be 6
-  filter(n_var != 6) %>% 
+  filter(n_var != 6) %>%
   pull(source_id)
 
 hist <- hist %>% 
@@ -29,7 +30,7 @@ hist <- hist %>%
 ssps <- esgf_query(
   activity = "ScenarioMIP",
   variable = c("tas", "tasmin", "tasmax", "pr", "hfss", "hfls"),
-  experiment = c("ssp126", "ssp245", "ssp585"),
+  experiment = c("ssp126", "ssp245", "ssp370", "ssp585"),
   frequency = "mon",
   source = NULL,
   resolution = NULL,
@@ -42,26 +43,21 @@ ssps <- esgf_query(
   #TODO: double-check that all models that go to 2300 have a file that ends in 2100
   filter(datetime_end <= ymd("2100-12-01"))
 
-ssps_incomp <- 
+ssps_incomp <-
   ssps %>% 
   group_by(source_id, experiment_id) %>% 
-  summarize(n_var = length(unique(variable_id))) %>%  
-  summarize(n_var = sum(n_var)) %>%  #should be 6*3 = 18
-  filter(n_var != 18) %>% 
-  pull(source_id)
+  summarize(n_var = length(unique(variable_id))) %>% #should be 6
+  filter(n_var != 6)
 
-ssps <- ssps %>% 
-  filter(!source_id %in% ssps_incomp)
-
+ssps <- anti_join(ssps, ssps_incomp)
 
 idx <- bind_rows(hist, ssps)
 
 idx_incomp <-
   idx %>% 
-  group_by(source_id, experiment_id) %>% 
-  summarize(n_var = length(unique(variable_id))) %>% 
-  summarize(n_var = sum(n_var)) %>%   #should be 24
-  filter(n_var != 24) %>% 
+  group_by(source_id) %>% 
+  summarize(n_experiment = length(unique(experiment_id))) %>% 
+  filter(n_experiment != 5) %>%  #require that all 5 experiments are present
   pull(source_id)
 
 idx <-
@@ -74,8 +70,8 @@ idx <-
  #INM-CM4-8 and INM-CM5-0 might also be duplicates with different resolutions.  Can't tell yet from documentation.
 
 unique(idx$source_id)
+length(unique(idx$source_id))
 
-
-#19 models with all the variables for both historical and projections
+#8 models with all the variables for both historical and projections
 
 write_csv(idx, here("metadata", "cmip6_index.csv"))
