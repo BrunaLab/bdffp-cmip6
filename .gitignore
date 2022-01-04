@@ -7,3 +7,7 @@
 *.html
 *.zip
 *.pdf
+
+# Word
+*.docx
+!doc/templates/template.docx
