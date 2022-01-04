@@ -35,8 +35,7 @@ Ecological forecasting: ....
 
 Difficulties:
 
-0.
-Understanding CMIP models
+0.  Understanding CMIP models
 
 -   box1 for vocab: "experiment", "run", "source", etc.
 
