@@ -1,5 +1,5 @@
 ---
-title: "Using global climate model outputs for ecological forecasting at a local scale"
+title: "Using global climate model outputs for ecological experiments and forecasting at a local scale"
 shorttitle: "Running Title"
 author:
   - Eric R. Scott:
@@ -79,7 +79,7 @@ Abstract text
     General circulation models (GCMs) model the Earth's climate by modeling ocean, atmospheric, and land as coupled systems.
     [more].
     The Coupled Model Intercomparison Project (CMIP) provides specific starting conditions and "experiments" for these GCMs to run.
-    CMIP is now in its 6th iteration, corresponding with the 6th report of the IPCC.
+    CMIP is now in its 6th iteration, corresponding with the 6th report of the Intergovernmental Panel on Climate Change (IPCC).
     The "experiments" correspond to shared socioeconomic pathways (SSPs) laid out in the IPCC's 6th report.
     These SSPs differ from the representative concentration pathways (RCPs) used in the previous IPPC report and in CMIP5 models in that they consider a range of global socioeconomic possibilities ranging from very optimistic elimination of fossil fuel consumption and carbon capture technologies with strong international cooperation, to expansion of fascism and nationalism, continued investment in fossil fuel technologies, and increasing global inequality.
     These scenarios are then combined with "forcings" comparable to the RCPs of CMIP5.
@@ -93,14 +93,15 @@ Abstract text
 2.  Why should ecologists be interested?
     Ecologists and global change biologists are often interested in the impacts of climate change on natural systems [cite some study about increase in climate change biology over time].
 
-Experiments: scientists devise experiments to test the effects of various aspects of climate change such as warming [citation], drought [citation], or rising CO2 [FACE study], or some combination of variables [BACE, others].
-The levels of these variables may be determined from literature that is informed by CMIP or other GCM predictions, but often the treatments are "rough" and correspond to continental or global scale patterns (e.g. 50% and 25% rainfall reduction; 1º, 2º, 3º C warming above ambient).
-\_\_\_ proposes using model output data from sources such as CMIP6 to obtain more precise predictions.
-They describe an experimental setup using exactly the daily predicted precipitation from a multi-model mean output to water their plants.
-By using outputs from two scenarios, they are able to ask questions about the impacts of climate change on a very local level.
-Ecological forecasting: ....
+In manipulative experiments, researchers manipulate climatic variables to test the effects of future climate change through warming [@peterjohnResponsesTraceGas1994], drought [@scottInteractiveEffectsDrought2019], or rising CO2 [@mcleodFreeairCarbonDioxide1999], or some combination of variables [@hoeppnerInteractiveResponsesOldfield2012; @oriansCombinedImpactsProlonged2019] <!--# add citations probably, especially warming.  Add an arctic example with those plastic hexagon things -->.
+The treatment levels used in these experimental studies are often round numbers representing rough approximations of future conditions (e.g. 50%, 100%, and 150% ambient rainfall; 1, 2.7 and 4 ºC warming above ambient in @hoeppnerInteractiveResponsesOldfield2012).
+When these treatment levels correspond to GCM model output, they often correspond to continental or global scale patterns rather than local projections <!--# example and citation -->.
+@owenFrameworkUsingDownscaled2019 propose a framework for using model output data from sources such as CMIP6 to obtain more precise, local predictions to use in experimental studies.
+However, this approach is relatively new and has only been used in one study to our knowledge [@owenBarnyardgrassEchinochloaCrusgalli2020].
 
-Difficulties:
+In modeling experiments and ecological forecasting...
+
+Difficulties: <!--# should re-read Owen et al. to make sure I'm not missing anything -->
 
 0.  Understanding CMIP models
 
@@ -122,7 +123,7 @@ Difficulties:
 
 3.  Model quality control
 
--   models have errors (link to error database)
+-   Model output may contain errors, some of which may be reported and view-able through the Earth System Documentation portal at [errata.es-doc.org](https://errata.es-doc.org/static/index.html). However, not all errors may have been discovered and documented. For example, at the time of writing this manuscript we found several errors in \_\_\_\_\_ that were unreported in the system (details below).
 -   even if not "errors", some models may be unrealistic for your region
 -   compare observed data to "historical" experiments. Know that "historical" is not meant to be accurate to the day, but patterns like seasonality and \#of droughts should be captured accurately at a decadal scale.
 -   plots to make, stats to calculate
