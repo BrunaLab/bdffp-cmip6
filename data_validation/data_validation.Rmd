@@ -295,7 +295,61 @@ drought_plots <-
 ```
 
 
-# Comparison to Observed Historical
+# Comparison to Observed
+
+```{r annual-precip, include=FALSE}
+#calculate total annual precip means and SDs
+# Observed
+xa_tap <- 
+  xa_raw %>% 
+  mutate(year = str_extract(yearmonth, "\\d{4}")) %>% 
+  group_by(year) %>% 
+  summarise(tap = sum(pr)) %>% 
+  pull(tap)
+
+cmip_tap <- 
+  map(df_list, 
+      ~ .x %>% 
+        filter(experiment_id == "historical") %>% 
+        mutate(year = year(time)) %>% 
+        group_by(year) %>% 
+        summarize(tap = sum(pr) %>% as.numeric()) %>% 
+        pull(tap)
+  )
+# ± 2SD
+mean(xa_tap) - sd(xa_tap)*2
+mean(xa_tap) + sd(xa_tap)*2
+
+# ± 20% of mean
+mean(xa_tap) * 0.8
+mean(xa_tap) * 1.2
+
+# Quantiles
+quantile(xa_tap, c(0.10, 0.5, 0.9))
+
+# ± 95%CI
+library(boot)
+boot(xa_tap, function(x, i) c(mean(x[i])), R = 999) %>% boot.ci(conf = .95)
+
+tap_df <-
+  map_df(cmip_tap,
+       ~ tibble(
+         pr_mean_annual = mean(.x),
+         diff = mean(.x) - mean(xa_tap)
+       ),
+       .id = "source_id") %>%
+  mutate(within20 = between(pr_mean_annual, mean(xa_tap) * 0.8, mean(xa_tap) * 1.2)) %>%
+  add_row(
+    source_id = "observed",
+    pr_mean_annual = mean(xa_tap),
+    diff = 0,
+    within20 = NA,
+    .before = 1
+  ) %>% 
+  mutate(across(c(pr_mean_annual, diff), round)) %>% 
+    mutate(pr_mean_annual = glue::glue("{pr_mean_annual} ({diff})")) %>% 
+    select(-diff)
+```
 
 
 ```{r include=FALSE}
@@ -359,8 +413,6 @@ season_plots <-
 ```
 
 
-
-
 ```{r include=FALSE}
 table_rough <-
   season_df %>%
@@ -372,6 +424,7 @@ table_rough <-
     tasmax_cor = cor(mean_tasmax, xa$tasmax, method = "spearman")
   ) %>%
   full_join(cmip_chisq, by = "source_id") %>% 
+  full_join(tap_df, by = "source_id") %>% 
   #make columns for plots to go eventually
   mutate(pr_plot = NA,
          tas_plot = NA,
@@ -412,7 +465,8 @@ table_rough <-
 ```
 
 ```{r echo=FALSE}
-table_rough %>% 
+table_formatted <- 
+  table_rough %>% 
   # highlight poor correlations
   tab_style(
     style = list(
@@ -450,6 +504,7 @@ table_rough %>%
       rows = tasmax_cor < 0.45
     )
   ) %>% 
+  # highlight significant p-values for goodness of fit test
   tab_style(
     style = list(
       cell_text(color = "red")
@@ -459,16 +514,28 @@ table_rough %>%
       rows = chisq <= 0.05
     )
   ) %>% 
+  # highlight mean annual precipitation not within 20% of observed
+  tab_style(
+    style = list(
+      cell_text(color = "red")
+    ),
+    locations = cells_body(
+      columns = c(pr_mean_annual),
+      rows = !within20
+    )
+  ) %>% 
+  cols_hide(within20) %>% 
   tab_spanner("Seasonality", c(ends_with("_plot"), ends_with("cor")), id = "season") %>% 
   tab_spanner("Historical Drought Freq.", c(drought_hist, chisq), id = "hist") %>% 
   cols_label(
     source_id = "Source",
+    pr_mean_annual = "Mean annual pr (∆obs) [mm/yr]",
     pr_cor = "pr",
     tas_cor = "tas",
     tasmin_cor = "tasmin",
     tasmax_cor = "tasmax",
-    pr_plot = "precipitation",
-    tas_plot = "temperature",
+    pr_plot = "precip",
+    tas_plot = "temp",
     drought_hist = "drought freq.",
     chisq = "Chi-squared"
   ) %>% 
@@ -479,12 +546,23 @@ table_rough %>%
       rows = source_id == "observed"
     )
   ) %>% 
+  tab_footnote("Red indicates mean annual precipitation not within ± 20% of observed",
+               cells_column_labels(pr_mean_annual)) %>% 
   tab_footnote("Spearman's rho. Rho < 0.45 highlighted in red.",
                cells_column_spanners("season")) %>% 
   tab_footnote("p-value from Chi-squared goodness-of-fit test comparing frequency of categories of drought to observed.  A smaller p-value means more dissimilar frequencies.",
                cells_column_spanners("hist")) %>% 
   tab_header(title = "Comparison of observed data to CMIP6 'historical' output",
              subtitle = "Data only from 1980 to 2015 to match observed. Results under 'Seasonality' refer to means for each month. Results under 'Historical Drought Freq' use SPEI3 to categorize drought into no drought (blue), mild (yellow), moderate (orange), severe (dark orange), and extreme (red)")
+```
+
+```{r echo=FALSE}
+table_formatted %>% 
+  cols_width(
+    drought_hist ~ px(150),
+    pr_plot ~ px(150),
+    tas_plot ~ px(150)
+  )
 ```
 
 
