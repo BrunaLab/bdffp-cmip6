@@ -268,7 +268,7 @@ cmip_chisq <-
                                simulate.p.value = TRUE)$p.value)
 ```
 
-```{r include=FALSE}
+```{r droughtplots, include=FALSE}
 #mini histograms
 ulim <- max(cmip_drought$prop_months)
 drought_plots <-
@@ -395,6 +395,7 @@ season_plots <-
         scale_x_continuous("month", breaks = 1:12,
                            labels = ~month(.x, label = FALSE)) +
         scale_y_unit("pr", limits = c(0, 456)) +
+        labs(y = "mm/mon") +
         theme(text = element_text(size = 45))
     }),
     tas_season = map(data, ~{
@@ -407,6 +408,7 @@ season_plots <-
                            breaks = 1:12,
                            labels = ~ month(.x, label = FALSE)) +
         scale_y_unit("tas", limits = c(19, 43)) +
+        labs(y = "ºC") +
         theme(text = element_text(size = 45))
     })) %>% 
       select(-data)
