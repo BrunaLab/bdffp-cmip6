@@ -103,5 +103,5 @@ To reproduce download and analysis run the scripts in `R/` sequentially.  Please
 
 # QA/QC
 
-See `data_validation` for a simple data validation report and plots of the raw data.  See also the errata for CMIP6 to check for known issues with particular models, scenarios, and variables (https://errata.es-doc.org/static/index.html)
+See [data validation](https://brunalab.github.io/heliconia-cmip/) for reports and plots of the data.  See also the errata for CMIP6 to check for known issues with particular models, scenarios, and variables (https://errata.es-doc.org/static/index.html)
 
