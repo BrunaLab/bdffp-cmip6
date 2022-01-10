@@ -95,7 +95,7 @@ Abstract text
 
 In manipulative experiments, researchers manipulate climatic variables to test the effects of future climate change through warming [@peterjohnResponsesTraceGas1994], drought [@scottInteractiveEffectsDrought2019], or rising CO2 [@mcleodFreeairCarbonDioxide1999], or some combination of variables [@hoeppnerInteractiveResponsesOldfield2012; @oriansCombinedImpactsProlonged2019] <!--# add citations probably, especially warming.  Add an arctic example with those plastic hexagon things -->.
 The treatment levels used in these experimental studies are often round numbers representing rough approximations of future conditions (e.g. 50%, 100%, and 150% ambient rainfall; 1, 2.7 and 4 ºC warming above ambient in @hoeppnerInteractiveResponsesOldfield2012).
-When these treatment levels correspond to GCM model output, they often correspond to continental or global scale patterns rather than local projections <!--# example and citation -->.
+While these treatment levels may be informed by GCM model output, they often correspond to continental or global scale patterns rather than local projections, and experimental manipulations may not capture the changes in climate variability predicted by these models <!--# example and citation -->.
 @owenFrameworkUsingDownscaled2019 propose a framework for using model output data from sources such as CMIP6 to obtain more precise, local predictions to use in experimental studies.
 However, this approach is relatively new and has only been used in one study to our knowledge [@owenBarnyardgrassEchinochloaCrusgalli2020].
 
@@ -107,11 +107,28 @@ Difficulties: <!--# should re-read Owen et al. to make sure I'm not missing anyt
 
 -   box1 for vocab: "experiment", "run", "source", etc.
 
+## CMIP terms
+
+-   Experiment: here, an experiment refers to a run of the GCM model using a particular set of parameters.
+    For example, "historical", "ssp126", and "ssp585" are each different experiments.
+
+-   Variant: Starting conditions for model simulations are standardized across sources and indicated as "variants".
+    Variant labels include indices for "r" for realization", "i" for initialization, "p" for physics, and "f" for forcing. <!--# sentence to decode variant labels or at least direct reader to documentation -->Variant "r1i1p1f1" is common to all model outputs and if your interest is in making comparisons among models, it may be helpful to restrict your search to only this variant label. If you are interested in obtaining multiple simulations, you may need to expand your search to other variant labels.
+
+-   Source: The term "source" is used to refer to the particular model.
+    For example, <!--# some example models, including two by same agency to drive home the point -->
+
 1.  Accessing data, downloading it
 
--   portals that pre-compute things
--   Some portals allow download of multi-model means, but you might want to do that yourself, since some models may be inappropriate for your particular region (discussion below).
--   ESGF portal
+Raw CMIP6 model data are hosted on four portals: esgf-node.llnl.gov (USA, PCMDI/LLNL), esgf-node.ipsl.upmc.fr (France, IPSL), esgf-data.dkrz.de (Germany, DKRZ), and esgf-index1.ceda.ac.uk (UK, CEDA).
+These archives should be identical, so choose whichever portal is geographically closest to you for fastest download speeds.
+Additionally, projects that summarize or aggregate CMIP6 data in various ways exist to provide data <!--# revise! -->.
+The [Copernicus Climate Change Service](%5Bhttps://cds.climate.copernicus.eu%5D(https://cds.climate.copernicus.eu/#!/home)/) (CITATION), provides a portal for accessing CMIP6 data that allows filtering by time and sub-region extraction by latitude and longitude bounding box.
+Additionally, they provide python code to access their API for programmatic download.
+The ability to filter the global datasets combined with programmatic access can significantly speed up download times for large projects.
+The World Meteorological Organization provides CMIP6 data through their [Climate Explorer](%5Bhttps://climexp.knmi.nl/%5D(https://climexp.knmi.nl/start.cgi)).
+This portal provides multimodel means of 6 variables as well as individual model outputs and provides options for data filtering, subsetting, and analysis online before downloading model outputs.
+
 -   programmatic access
 -   helpful R (and python?) packages
 
