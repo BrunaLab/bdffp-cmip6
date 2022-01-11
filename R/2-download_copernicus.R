@@ -12,7 +12,6 @@ library(here)
 library(tidyverse)
 library(glue)
 library(here)
-use_virtualenv(here("r-reticulate"))
 import("cdsapi")
 
 # Wrap python function to work in R
@@ -82,7 +81,7 @@ avail <-
   filter(source_id %in% on_portal) %>% 
   pull(source_id)
 # avail
-# Only 9 of the models we are looking for are available through this portal
+# Only 6 of the models we are looking for are available through this portal
 
 dl_avail <- 
   dl_df %>% 
