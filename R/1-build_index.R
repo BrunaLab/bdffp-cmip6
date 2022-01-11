@@ -3,6 +3,8 @@ library(tidyverse)
 library(lubridate)
 library(here)
 
+
+# historical experiment is separate query ---------------------------------
 hist <- esgf_query(
   activity = "CMIP",
   variable = c("tas", "tasmin", "tasmax", "pr", "hfss", "hfls"),
@@ -17,16 +19,8 @@ hist <- esgf_query(
   ungroup()
 
 
-hist_incomp <-
-  hist %>% 
-  group_by(source_id) %>% 
-  summarize(n_var = length(unique(variable_id))) %>%  #should be 6
-  filter(n_var != 6) %>%
-  pull(source_id)
 
-hist <- hist %>% 
-  filter(!source_id %in% hist_incomp)
-
+# SSPs query --------------------------------------------------------------
 ssps <- esgf_query(
   activity = "ScenarioMIP",
   variable = c("tas", "tasmin", "tasmax", "pr", "hfss", "hfls"),
@@ -43,35 +37,49 @@ ssps <- esgf_query(
   #TODO: double-check that all models that go to 2300 have a file that ends in 2100
   filter(datetime_end <= ymd("2100-12-01"))
 
-ssps_incomp <-
-  ssps %>% 
-  group_by(source_id, experiment_id) %>% 
-  summarize(n_var = length(unique(variable_id))) %>% #should be 6
-  filter(n_var != 6)
 
-ssps <- anti_join(ssps, ssps_incomp)
 
+# Combine -----------------------------------------------------------------
 idx <- bind_rows(hist, ssps)
 
-idx_incomp <-
+
+# Filter out sources missing data or scenarios ----------------------------
+dl <- 
   idx %>% 
+  select(source_id, experiment_id, variable_id, file_size)
+
+full_table <-
+  expand_grid(
+    source_id = unique(dl$source_id),
+    experiment_id = c("historical" , "ssp126", "ssp245", "ssp370", "ssp585"),
+    variable_id = c("tas", "pr", "hfss", "hfls") 
+    #don't actually need tasmin and tasmax for calculations
+  )
+
+complete <-
+  left_join(full_table, dl) %>% 
+  mutate(exists = case_when(file_size > 0 ~ TRUE,
+                            TRUE ~ FALSE))
+
+complete_sources <- 
+  complete %>% 
   group_by(source_id) %>% 
-  summarize(n_experiment = length(unique(experiment_id))) %>% 
-  filter(n_experiment != 5) %>%  #require that all 5 experiments are present
-  pull(source_id)
+  filter(all(exists)) %>% 
+  pull(source_id) %>% 
+  unique()
 
 idx <-
   idx %>% 
-  filter(!source_id %in% idx_incomp) %>% 
+  filter(source_id %in% complete_sources) %>% 
 # Remove high res if duplicate resolutions
   filter(source_id != "EC-Earth3-Veg") %>% 
   filter(source_id != "MPI-ESM1-2-HR") %>% 
   filter(!(source_id == "FIO-ESM-2-0" & nominal_resolution == "10000 km"))
  #INM-CM4-8 and INM-CM5-0 might also be duplicates with different resolutions.  Can't tell yet from documentation.
 
+# Write to .csv -----------------------------------------------------------
+
 unique(idx$source_id)
 length(unique(idx$source_id))
-
-#8 models with all the variables for both historical and projections
 
 write_csv(idx, here("metadata", "cmip6_index.csv"))
