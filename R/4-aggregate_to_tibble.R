@@ -32,7 +32,8 @@ safe_read_stars <- possibly(read_stars, NULL)
 # read in files for a single source and scenario (e.g. accesss_cm2 historical)
 read_stars_scenario <- function(dir) {
   scenario_files <- list.files(dir, pattern = ".nc$", full.names = TRUE)
-  vars <- c("hfls", "hfss", "pr", "tas", "tasmin", "tasmax")
+  #extract variable names from file names
+  vars <- str_extract(scenario_files, "([^/]*)$") %>% str_extract("[^_]*(?=_)")
   map(paste0(vars, "_"), ~scenario_files[str_detect(scenario_files, .x)]) %>%
     set_names(vars) %>% 
     safe_read_stars()
