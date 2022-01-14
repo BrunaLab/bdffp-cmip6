@@ -68,7 +68,7 @@ xa <-
          across(starts_with("tas"), ~set_units(.x, "degC")))
 ```
 
-```{r include=FALSE}
+```{r filter_time, include=FALSE}
 #filter so timespan is consistent
 df_list <- 
   df_list %>% map(~{
@@ -125,16 +125,13 @@ df_list <-
   )
 ```
 
+For the observed data and the CMIP6 data from the same period, I calculate 3-month SPEI using precipitation and PET.  I then use SPEI to categorize months as experiencing mild, moderate, severe, extreme, or no drought.  I compare the frequencies between observed and CMIP6 data with a Chi-squared goodness-of-fit test (p < 0.05 = dissimilar frequencies).
 
 ```{r spei, include=FALSE}
 df_list <- 
   df_list %>%
   map(calc_spei)
-```
 
-For the observed data and the CMIP6 data from the same period, I calculate 3-month SPEI using precipitation and PET.  I then use SPEI to categorize months as experiencing mild, moderate, severe, extreme, or no drought.  I compare the frequencies between observed and CMIP6 data with a Chi-squared goodness-of-fit test (p < 0.05 = dissimilar frequencies).
-
-```{r include=FALSE}
 #calc spei for observed
 xa_spei <-
   xa_raw %>% 
@@ -147,12 +144,11 @@ xa_spei <-
       ref.start = c(1980, 4),
       ref.end = c(2014, 12)
     )$fitted
-  )
-  )
+  ))
 ```
 
 
-```{r include=FALSE}
+```{r count_droughts, include=FALSE}
 # categorize and count droughts
 xa_drought <- 
   xa_spei %>% 
@@ -198,7 +194,7 @@ cmip_drought <-
   ungroup()
 ```
 
-```{r include=FALSE}
+```{r chisq, include=FALSE}
 #chisq tests
 obs <- xa_drought$n_months
 cmip_chisq <- 
@@ -210,7 +206,7 @@ cmip_chisq <-
                                simulate.p.value = TRUE)$p.value)
 ```
 
-```{r include=FALSE}
+```{r mini_hist, include=FALSE}
 #mini histograms
 ulim <- max(cmip_drought$prop_months)
 drought_plots <-
@@ -248,7 +244,7 @@ season_df <-
              time <= ymd("2015-09-30")) %>% 
       mutate(month = month(time), .after=time) %>% 
       group_by(month) %>% 
-      summarize(across(c(pr, tas, tasmin, tasmax), mean,
+      summarize(across(c(pr, starts_with("tas")), mean,
                        .names = "mean_{.col}")) 
   }, .id = "source_id")
 ```
@@ -265,7 +261,7 @@ season_df <- bind_rows(xa2, season_df) %>%
 ```
 
 
-```{r include=FALSE}
+```{r mini_plots, include=FALSE}
 # Create mini plots of monthly average precip and temperature for table
 
 # season_df$mean_pr %>% range()
@@ -303,7 +299,7 @@ season_plots <-
 
 
 
-```{r include=FALSE}
+```{r gt_rough, include=FALSE}
 table_rough <-
   season_df %>%
   group_by(source_id) %>%
@@ -353,7 +349,7 @@ table_rough <-
   fmt_number(chisq, decimals = 3)
 ```
 
-```{r echo=FALSE}
+```{r gt_format, echo=FALSE}
 table_rough %>% 
   # highlight poor correlations
   tab_style(
@@ -437,7 +433,7 @@ Below are validation reports and plots of all data downloaded from each CMIP6 so
 ```{r plot_fun, include=FALSE}
 # Function to plot data
 plot_all <- function(data) {
-  p_list <- map(c("tas", "tasmin", "tasmax", "pr", "hfls", "hfss", "pet", "spei"),
+  p_list <- map(c("tas", "pr", "hfls", "hfss", "pet", "spei"),
       ~ggplot(data,
               aes_string(x = "time", y = .x, color = "experiment_id")) +
         geom_line(alpha = 0.5) + 
@@ -448,6 +444,8 @@ plot_all <- function(data) {
 }
 ```
 
+<!--> might be possible to generate this programmatically with the help of as_raw_html(gt)? <-->
+
 ```{r echo=FALSE}
 i=1
 htmltools::h2(names(df_list[i]))
@@ -455,18 +453,18 @@ htmltools::h2(names(df_list[i]))
 ```{r validate=TRUE}
   col_exists(
     df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
+    c("hfls", "hfss", "tas", "pr"),
+    label = "all required variables exist"
     ) 
   col_vals_make_set(
     df_list[[i]],
     experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
+    c("historical", "ssp126", "ssp245", "ssp370", "ssp585"),
     label = "all scenarios exist"
   )
   col_vals_not_null(
     df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
+    c(hfls, hfss, tas, pr),
     label = "no missing values"
   )
   col_vals_expr(
@@ -476,11 +474,11 @@ htmltools::h2(names(df_list[i]))
   )
   col_vals_between(
     df_list[[i]],
-    c(tas, tasmin, tasmax),
+    tas,
     10,
     55,
     label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
+    preconditions = ~. %>% dplyr::mutate(tas = as.numeric(tas))
   )
 ```
 
