@@ -13,7 +13,7 @@ convert_units <- function(x) {
     mutate(across(starts_with("tas"), ~set_units(.x, "degC")),
            d_per_mon = days_in_month(month(time)) %>% set_units("d/month"), 
            pr = set_units((pr/water_density), "mm/d") * d_per_mon) %>% 
-    select(-d_per_mon)
+    dplyr::select(-d_per_mon)
 }
 
 
@@ -58,3 +58,38 @@ calc_spei <- function(x, scale = 3, ref_period = c("observed", "historical")){
   #recombine and deduplicate historical
   bind_rows(spei_done) %>% distinct()
 }
+
+#Calculate drought duration as number of consecutive months with SPEI <= -1
+calc_drought_duration <- function(tbl) {
+  drought_lens <- 
+    tbl %>% 
+    filter(!is.na(spei)) %>% 
+    pull(spei) %>% 
+    drought_lens()
+  
+  tibble(
+    mean_n_mon = mean(drought_lens),
+    sd_n_mon = sd(drought_lens),
+    n_droughts = length(drought_lens)
+  )
+}
+
+drought_lens <- function(spei) {
+  test <- spei <= -1
+  x <- numeric(length = length(spei))
+  for (i in seq_len(length(spei))) {
+    if(i == 1){
+      prev <- 0
+    } else {
+      prev <- x[i-1]
+    }
+    if(isTRUE(test[i])) { #if a drought month, increment
+      x[i] <- prev + 1
+    } else { #otherwise, reset counter to 0
+      x[i] <- 0
+    }
+  }
+  x<-x[lead(x)==0 & x != 0] #just get the last value for every month
+  x[!is.na(x)] #remove NA at the end if it's still a drought
+}
+

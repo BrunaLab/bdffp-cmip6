@@ -125,7 +125,7 @@ df_list <-
   )
 ```
 
-For the observed data and the CMIP6 data from the same period, I calculate 3-month SPEI using precipitation and PET.  I then use SPEI to categorize months as experiencing mild, moderate, severe, extreme, or no drought.  I compare the frequencies between observed and CMIP6 data with a Chi-squared goodness-of-fit test (p < 0.05 = dissimilar frequencies).
+For the observed data and the CMIP6 data from the same period, I calculate 3-month SPEI using precipitation and PET.
 
 ```{r spei, include=FALSE}
 df_list <- 
@@ -147,91 +147,32 @@ xa_spei <-
   ))
 ```
 
+I calculate drought duration as number of consecutive months with SPEI ≤ -1.  A single drought, therefore, is defined here as a span of consecutive months all with SPEI ≤ -1.
 
-```{r count_droughts, include=FALSE}
+```{r drougt_duration, include=FALSE}
 # categorize and count droughts
 xa_drought <- 
-  xa_spei %>% 
-  filter(!is.na(spei)) %>% 
-  filter(between(date, ymd("1980-04-1"), ymd("2014-12-31"))) %>% 
-  mutate(category = case_when(
-    spei < 0    & spei >= -1    ~ "mild",
-    spei < -1   & spei >= -1.5  ~ "moderate",
-    spei < -1.5 & spei >= -2    ~ "severe",
-    spei < -2                   ~ "extreme",
-    TRUE                        ~ "no drought"
-  ) %>% as.factor()) %>% 
-  mutate(category = fct_reorder(category, spei, .desc = TRUE)) %>% 
-  count(category, name = "n_months")
+  calc_drought_duration(xa_spei) %>% 
+  add_column(source_id = "observed") %>% 
+  dplyr::select(source_id, everything())
 
 cmip_drought <- 
   df_list %>% 
   map_dfr(~.x %>% 
-            filter(!is.na(spei)) %>% 
-            filter(between(time, ymd_hms("1980-04-1 00:00:00"), ymd_hms("2014-12-31 24:00:00"))) %>% 
-            mutate(category = case_when(
-              spei < 0    & spei >= -1    ~ "mild",
-              spei < -1   & spei >= -1.5  ~ "moderate",
-              spei < -1.5 & spei >= -2    ~ "severe",
-              spei < -2                   ~ "extreme",
-              TRUE                        ~ "no drought"
-            ) %>% factor(levels = c("mild", "moderate", "severe", "extreme", "no drought"))) %>% 
-            mutate(category = fct_reorder(category, spei, .desc = TRUE)) %>% 
-            count(category, name = "n_months", .drop = FALSE),
+            filter(time <= max(xa_spei$date) & time >= min(xa_spei$date)) %>%  
+            calc_drought_duration(),
           .id = "source_id"
   ) 
 
 # join together
 cmip_drought <- 
   bind_rows(
-  xa_drought %>%
-    add_column(source_id = "observed", .before = "category"),
+  xa_drought,
   cmip_drought
 ) %>% 
-  mutate(source_id = fct_inorder(source_id)) %>% 
-  group_by(source_id) %>% 
-  mutate(prop_months = n_months / sum(n_months)) %>% 
-  ungroup()
+  mutate(source_id = fct_inorder(source_id))
+# cmip_drought %>% arrange(mean_n_mon)
 ```
-
-```{r chisq, include=FALSE}
-#chisq tests
-obs <- xa_drought$n_months
-cmip_chisq <- 
-  cmip_drought %>% 
-  group_by(source_id) %>% 
-  summarize(chisq = chisq.test(n_months,
-                               p = obs, 
-                               rescale.p = TRUE,
-                               simulate.p.value = TRUE)$p.value)
-```
-
-```{r mini_hist, include=FALSE}
-#mini histograms
-ulim <- max(cmip_drought$prop_months)
-drought_plots <-
-  cmip_drought%>%  
-  mutate(prop_droughts = n_months/sum(obs)) %>% 
-  group_by(source_id) %>%
-  nest() %>% 
-  mutate(
-    prop_droughts = map(data, ~{
-      ggplot(.x, aes(x = category, fill = category, y = prop_months)) +
-        geom_col(color = "black") +
-        scale_fill_manual(values = c("no drought" = "blue",
-                                     "mild" =  "#ffffb2",
-                                     "moderate" = "#fecc5c",
-                                     "severe" = "#fd8d3c",
-                                     "extreme" =  "#e31a1c")) +
-        scale_y_continuous("prop. months", limits = c(0, ulim)) +
-        labs(x = expression("drought severity \u2192")) +
-        theme(text = element_text(size = 45),
-              legend.position = "none",
-              axis.text.x = element_blank())
-    })) %>% 
-  select(-data)
-```
-
 
 # Comparison to Observed Historical
 
@@ -293,7 +234,7 @@ season_plots <-
         scale_y_unit("tas", limits = c(19, 43)) +
         theme(text = element_text(size = 45))
     })) %>% 
-      select(-data)
+      dplyr::select(-data)
 ```
 
 
@@ -309,11 +250,13 @@ table_rough <-
     tasmin_cor = cor(mean_tasmin, xa$tasmin, method = "spearman"),
     tasmax_cor = cor(mean_tasmax, xa$tasmax, method = "spearman")
   ) %>%
-  full_join(cmip_chisq, by = "source_id") %>% 
+  full_join(cmip_drought, by = "source_id") %>% 
+  #format column for mean ± sd
+  mutate(duration = glue("{round(mean_n_mon, 1)}±{round(sd_n_mon, 1)}")) %>% 
+  dplyr::select(-mean_n_mon, -sd_n_mon) %>% 
   #make columns for plots to go eventually
   mutate(pr_plot = NA,
-         tas_plot = NA,
-         drought_hist = NA) %>%
+         tas_plot = NA) %>%
   #make into gt
   gt() %>%
   #place plots
@@ -335,18 +278,9 @@ table_rough <-
           aspect_ratio = 1.5)
     }
   ) %>% 
-  text_transform(
-    locations = cells_body(drought_hist),
-    fn = function(x) {
-      map(drought_plots$prop_droughts,
-          ggplot_image,
-          height = px(80),
-          aspect_ratio = 1.5)
-    }
-  ) %>% 
   # round correlations
-  fmt_number(ends_with("_cor")) %>% 
-  fmt_number(chisq, decimals = 3)
+  fmt_number(ends_with("_cor"))
+# table_rough
 ```
 
 ```{r gt_format, echo=FALSE}
@@ -388,17 +322,8 @@ table_rough %>%
       rows = tasmax_cor < 0.45
     )
   ) %>% 
-  tab_style(
-    style = list(
-      cell_text(color = "red")
-    ),
-    locations = cells_body(
-      columns = chisq,
-      rows = chisq <= 0.05
-    )
-  ) %>% 
-  tab_spanner("Seasonality", c(ends_with("_plot"), ends_with("cor")), id = "season") %>% 
-  tab_spanner("Historical Drought Freq.", c(drought_hist, chisq), id = "hist") %>% 
+  tab_spanner("Monthly means", c(ends_with("_plot"), ends_with("cor")), id = "season") %>%
+  tab_spanner("Drought duration and frequency", c(duration, n_droughts), id = "droughts") %>%
   cols_label(
     source_id = "Source",
     pr_cor = "pr",
@@ -407,8 +332,8 @@ table_rough %>%
     tasmax_cor = "tasmax",
     pr_plot = "precipitation",
     tas_plot = "temperature",
-    drought_hist = "drought freq.",
-    chisq = "Chi-squared"
+    n_droughts = "number",
+    duration = "duration (mon)"
   ) %>% 
   tab_footnote(
     md("Observed data from [Xavier et al. (2016)](https://doi.org/10.1002/joc.4518)"),
@@ -419,10 +344,8 @@ table_rough %>%
   ) %>% 
   tab_footnote("Spearman's rho. Rho < 0.45 highlighted in red.",
                cells_column_spanners("season")) %>% 
-  tab_footnote("p-value from Chi-squared goodness-of-fit test comparing frequency of categories of drought to observed.  A smaller p-value means more dissimilar frequencies.",
-               cells_column_spanners("hist")) %>% 
   tab_header(title = "Comparison of observed data to CMIP6 'historical' output",
-             subtitle = "Data only from 1980 to 2015 to match observed. Results under 'Seasonality' refer to means for each month. Results under 'Historical Drought Freq' use SPEI3 to categorize drought into no drought (blue), mild (yellow), moderate (orange), severe (dark orange), and extreme (red)")
+             subtitle = "Data only from 1980 to 2015 to match observed.")
 ```
 
 
