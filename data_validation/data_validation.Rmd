@@ -280,7 +280,8 @@ table_data <-
     min_rank(desc(pvals)) +
     min_rank(desc(pr_cor)) +
     min_rank(desc(tas_cor))
-    )
+    ) %>% 
+  full_join(season_plots)
 ```
 
 
@@ -296,7 +297,7 @@ table_rough <-
   text_transform(
     locations = cells_body(pr_plot),
     fn = function(x) {
-      map(season_plots$pr_season,
+      map(table_data$pr_season,
           ggplot_image,
           height = px(80),
           aspect_ratio = 1.5)
@@ -305,12 +306,13 @@ table_rough <-
   text_transform(
     locations = cells_body(tas_plot),
     fn = function(x) {
-      map(season_plots$tas_season,
+      map(table_data$tas_season,
           ggplot_image,
           height = px(80),
           aspect_ratio = 1.5)
     }
   ) %>% 
+  cols_hide(ends_with("season")) %>% 
   # round correlations
   fmt_number(ends_with("_cor"))
 # table_rough
@@ -417,7 +419,7 @@ plot_all <- function(data) {
 ```
 
 
-```{r echo=FALSE, results='asis'}
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
 for (i in seq_len(length(df_list))) {
   cat('\n')
   cat("## ", names(df_list[i]), "\n")
