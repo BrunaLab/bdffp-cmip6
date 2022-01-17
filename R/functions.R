@@ -43,7 +43,7 @@ calc_spei <- function(x, scale = 3, ref_period = c("observed", "historical")){
   
   #split into three dfs and calculate spei
   spei_done <-
-    c("ssp126", "ssp245", "ssp585") %>% 
+    c("ssp126", "ssp245", "ssp370", "ssp585") %>% 
     map(~ x %>% filter(experiment_id %in% c("historical", .x)) %>% arrange(time)) %>% 
     map(~ .x %>%
           mutate(spei = as.numeric(
@@ -68,6 +68,7 @@ calc_drought_duration <- function(tbl) {
     drought_lens()
   
   tibble(
+    droughts = list(drought_lens),
     mean_n_mon = mean(drought_lens),
     sd_n_mon = sd(drought_lens),
     n_droughts = length(drought_lens)
