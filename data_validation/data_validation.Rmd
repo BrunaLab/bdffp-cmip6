@@ -24,6 +24,8 @@ library(units)
 library(ggforce) #to get ggplot to work with `units`
 library(gt)
 library(SPEI)
+library(glue)
+source(here::here("R", "functions.R"))
 theme_set(theme_bw())
 # Use `validate_rmd()` here to set options for the
 # pointblank validation workflow within R Markdown documents
@@ -51,6 +53,7 @@ stop_if_not(!any(!paste0(source_id, "_data.csv") %in% csvs))
 ```
 
 
+
 ```{r read_files, message=FALSE, warning=FALSE, include=FALSE}
 #read in all files for CMIP6
 df_list <-
@@ -72,7 +75,7 @@ xa <-
          across(starts_with("tas"), ~set_units(.x, "degC")))
 ```
 
-```{r include=FALSE}
+```{r filter_time, include=FALSE}
 #filter so timespan is consistent
 df_list <- 
   df_list %>% map(~{
@@ -98,20 +101,19 @@ df_list <-
 ```
 
 ```{r convert, include=FALSE}
-water_density <- as_units(1000, "kg m-3")
-convert_units <- function(x) {
-  x  %>% 
-    #set units
-    mutate(across(c(hfls, hfss), ~set_units(.x, "W m-2")),
-           across(starts_with("tas"), ~set_units(.x, "K")),
-           pr = set_units(pr, "kg m-2 s-1")) %>% 
-    #do unit conversions
-    mutate(across(starts_with("tas"), ~set_units(.x, "degC")),
-           d_per_mon = days_in_month(month(time)) %>% set_units("d/month"), 
-           pr = set_units((pr/water_density), "mm/d") * d_per_mon) %>% 
-    select(-d_per_mon)
-}
 df_list <- map(df_list, convert_units)
+```
+
+
+# Ensure that all models are complete
+
+For this analysis, I only want to use models with `pr`, `tas`, `hfss`, and `hfls` variables in all 5 scenarios (historical, ssp126, ssp245, ssp370, and ssp585)
+
+```{r}
+df_list <- 
+  df_list %>%
+  keep(~all(c("pr", "tas", "hfss", "hfls") %in% names(.x))) %>% 
+  keep(~all(c("historical", "ssp126", "ssp245", "ssp370", "ssp585") %in% .x$experiment_id))
 ```
 
 # Calculations
@@ -132,17 +134,6 @@ $$
 in MJ/kg
 
 ```{r pet, include=FALSE}
-pet_energy_only <- function(hfls, hfss, tas) {
-  water_density <- as_units(1000, "kg m-3")
-  #latent heat of vaporization of water at temp T
-  tas <- set_units(tas, "degC") #just checks that units are in ºC
-  Lv <- (2.501 - 0.002361 * as.numeric(tas)) %>% set_units("MJ/kg")
-  hfls_mmd <- (hfls / Lv / water_density) %>% set_units("mm/day")
-  hfss_mmd <- (hfss / Lv / water_density) %>% set_units("mm/day")
-  #PET
-  0.8 * (hfls_mmd + hfss_mmd)
-}
-
 df_list <- 
   df_list %>%
   map(~ .x %>% mutate(pet = pet_energy_only(hfls, hfss, tas))) %>% 
@@ -153,46 +144,13 @@ df_list <-
   )
 ```
 
+For the observed data and the CMIP6 data from the same period, I calculate 3-month SPEI using precipitation and PET.
 
 ```{r spei, include=FALSE}
-# For each scenario, need a timeseries including "historical".  Then calc SPEI using historical as reference period, and re-join into one dataset.  Might be a better workflow for this with grouping or something.
-
-calc_spei <- function(x, scale = 3, ref_period = c("observed", "historical")){
-  ref_period <- match.arg(ref_period)
-  if (ref_period == "observed") {
-    ref_start <- c(1980, 4)
-    ref_end <- c(2014, 12) #not quite the end, but doesn't overlap with ssp projections
-  } else {
-    ref_start <- c(1850, 1)
-    ref_end <- c(2014, 12)
-  }
-  
-  #split into three dfs and calculate spei
-  spei_done <-
-    c("ssp126", "ssp245", "ssp585") %>% 
-    map(~ x %>% filter(experiment_id %in% c("historical", .x)) %>% arrange(time)) %>% 
-    map(~ .x %>%
-          mutate(spei = as.numeric(
-            spei(
-              ts(cb, freq = 12, start = c(year(min(time)), month(min(time)))),
-              scale = scale,
-              ref.start = ref_start,
-              ref.end = ref_end
-            )$fitted
-          )))
-  
-  #recombine and deduplicate historical
-  bind_rows(spei_done) %>% distinct()
-}
-
 df_list <- 
   df_list %>%
   map(calc_spei)
-```
 
-For the observed data and the CMIP6 data from the same period, I calculate 3-month SPEI using precipitation and PET.  I then use SPEI to categorize months as experiencing mild, moderate, severe, extreme, or no drought.  I compare the frequencies between observed and CMIP6 data with a Chi-squared goodness-of-fit test (p < 0.05 = dissimilar frequencies).
-
-```{r include=FALSE}
 #calc spei for observed
 xa_spei <-
   xa_raw %>% 
@@ -205,154 +163,51 @@ xa_spei <-
       ref.start = c(1980, 4),
       ref.end = c(2014, 12)
     )$fitted
-  )
-  )
+  ))
 ```
 
+I calculate drought duration as number of consecutive months with SPEI ≤ -1.  A single drought, therefore, is defined here as a span of consecutive months all with SPEI ≤ -1.
 
-```{r include=FALSE}
+```{r drougt_duration, include=FALSE}
 # categorize and count droughts
 xa_drought <- 
-  xa_spei %>% 
-  filter(!is.na(spei)) %>% 
-  filter(between(date, ymd("1980-04-1"), ymd("2014-12-31"))) %>% 
-  mutate(category = case_when(
-    spei < 0    & spei >= -1    ~ "mild",
-    spei < -1   & spei >= -1.5  ~ "moderate",
-    spei < -1.5 & spei >= -2    ~ "severe",
-    spei < -2                   ~ "extreme",
-    TRUE                        ~ "no drought"
-  ) %>% as.factor()) %>% 
-  mutate(category = fct_reorder(category, spei, .desc = TRUE)) %>% 
-  count(category, name = "n_months")
+  calc_drought_duration(xa_spei) %>% 
+  add_column(source_id = "observed") %>% 
+  dplyr::select(source_id, everything())
 
 cmip_drought <- 
   df_list %>% 
   map_dfr(~.x %>% 
-            filter(!is.na(spei)) %>% 
-            filter(between(time, ymd_hms("1980-04-1 00:00:00"), ymd_hms("2014-12-31 24:00:00"))) %>% 
-            mutate(category = case_when(
-              spei < 0    & spei >= -1    ~ "mild",
-              spei < -1   & spei >= -1.5  ~ "moderate",
-              spei < -1.5 & spei >= -2    ~ "severe",
-              spei < -2                   ~ "extreme",
-              TRUE                        ~ "no drought"
-            ) %>% factor(levels = c("mild", "moderate", "severe", "extreme", "no drought"))) %>% 
-            mutate(category = fct_reorder(category, spei, .desc = TRUE)) %>% 
-            count(category, name = "n_months", .drop = FALSE),
+            filter(time <= max(xa_spei$date) & time >= min(xa_spei$date)) %>%  
+            calc_drought_duration(),
           .id = "source_id"
   ) 
 
 # join together
 cmip_drought <- 
   bind_rows(
-  xa_drought %>%
-    add_column(source_id = "observed", .before = "category"),
+  xa_drought,
   cmip_drought
 ) %>% 
-  mutate(source_id = fct_inorder(source_id)) %>% 
-  group_by(source_id) %>% 
-  mutate(prop_months = n_months / sum(n_months)) %>% 
-  ungroup()
+  mutate(source_id = fct_inorder(source_id))
+
+
+#non-parametric t-tests (wilcoxon rank sum test).  Significant p means different from observed.
+pvals <- numeric(nrow(cmip_drought))
+for(i in 1:nrow(cmip_drought)) {
+  pvals[i] <- wilcox.test(cmip_drought$droughts[[1]], cmip_drought$droughts[[i]])$p.value
+}
+cmip_drought <- 
+  cmip_drought %>%
+  add_column(pvals) %>% 
+  select(-droughts)
 ```
 
-```{r include=FALSE}
-#chisq tests
-obs <- xa_drought$n_months
-cmip_chisq <- 
-  cmip_drought %>% 
-  group_by(source_id) %>% 
-  summarize(chisq = chisq.test(n_months,
-                               p = obs, 
-                               rescale.p = TRUE,
-                               simulate.p.value = TRUE)$p.value)
-```
+# Comparison to Observed Historical
 
-```{r droughtplots, include=FALSE}
-#mini histograms
-ulim <- max(cmip_drought$prop_months)
-drought_plots <-
-  cmip_drought%>%  
-  mutate(prop_droughts = n_months/sum(obs)) %>% 
-  group_by(source_id) %>%
-  nest() %>% 
-  mutate(
-    prop_droughts = map(data, ~{
-      ggplot(.x, aes(x = category, fill = category, y = prop_months)) +
-        geom_col(color = "black") +
-        scale_fill_manual(values = c("no drought" = "blue",
-                                     "mild" =  "#ffffb2",
-                                     "moderate" = "#fecc5c",
-                                     "severe" = "#fd8d3c",
-                                     "extreme" =  "#e31a1c")) +
-        scale_y_continuous("prop. months", limits = c(0, ulim)) +
-        labs(x = expression("drought severity \u2192")) +
-        theme(text = element_text(size = 45),
-              legend.position = "none",
-              axis.text.x = element_blank())
-    })) %>% 
-  select(-data)
-```
+I've ranked the CMIP6 models based on the correlations of monthly precipitation and temperature and the p-value from a non-parametric t-test (Wilcoxon rank sum test) for the mean duration of droughts defined as the nubmer of consecutive months with SPEI ≤ -1. 
 
-
-# Comparison to Observed
-
-```{r annual-precip, include=FALSE}
-#calculate total annual precip means and SDs
-# Observed
-xa_tap <- 
-  xa_raw %>% 
-  mutate(year = str_extract(yearmonth, "\\d{4}")) %>% 
-  group_by(year) %>% 
-  summarise(tap = sum(pr)) %>% 
-  pull(tap)
-
-cmip_tap <- 
-  map(df_list, 
-      ~ .x %>% 
-        filter(experiment_id == "historical") %>% 
-        mutate(year = year(time)) %>% 
-        group_by(year) %>% 
-        summarize(tap = sum(pr) %>% as.numeric()) %>% 
-        pull(tap)
-  )
-# ± 2SD
-mean(xa_tap) - sd(xa_tap)*2
-mean(xa_tap) + sd(xa_tap)*2
-
-# ± 20% of mean
-mean(xa_tap) * 0.8
-mean(xa_tap) * 1.2
-
-# Quantiles
-quantile(xa_tap, c(0.10, 0.5, 0.9))
-
-# ± 95%CI
-library(boot)
-boot(xa_tap, function(x, i) c(mean(x[i])), R = 999) %>% boot.ci(conf = .95)
-
-tap_df <-
-  map_df(cmip_tap,
-       ~ tibble(
-         pr_mean_annual = mean(.x),
-         diff = mean(.x) - mean(xa_tap)
-       ),
-       .id = "source_id") %>%
-  mutate(within20 = between(pr_mean_annual, mean(xa_tap) * 0.8, mean(xa_tap) * 1.2)) %>%
-  add_row(
-    source_id = "observed",
-    pr_mean_annual = mean(xa_tap),
-    diff = 0,
-    within20 = NA,
-    .before = 1
-  ) %>% 
-  mutate(across(c(pr_mean_annual, diff), round)) %>% 
-    mutate(pr_mean_annual = glue::glue("{pr_mean_annual} ({diff})")) %>% 
-    select(-diff)
-```
-
-
-```{r include=FALSE}
+```{r message=FALSE, warning=FALSE, include=FALSE}
 season_df <- 
   df_list %>% 
   map_dfr(~{.x %>% 
@@ -360,7 +215,7 @@ season_df <-
              time <= ymd("2015-09-30")) %>% 
       mutate(month = month(time), .after=time) %>% 
       group_by(month) %>% 
-      summarize(across(c(pr, tas, tasmin, tasmax), mean,
+      summarize(across(c(pr, starts_with("tas")), mean,
                        .names = "mean_{.col}")) 
   }, .id = "source_id")
 ```
@@ -377,7 +232,7 @@ season_df <- bind_rows(xa2, season_df) %>%
 ```
 
 
-```{r include=FALSE}
+```{r mini_plots, include=FALSE}
 # Create mini plots of monthly average precip and temperature for table
 
 # season_df$mean_pr %>% range()
@@ -411,12 +266,12 @@ season_plots <-
         labs(y = "ºC") +
         theme(text = element_text(size = 45))
     })) %>% 
-      select(-data)
+      dplyr::select(-data)
 ```
 
 
-```{r include=FALSE}
-table_rough <-
+```{r table_data, include=FALSE}
+table_data <- 
   season_df %>%
   group_by(source_id) %>%
   summarize(
@@ -425,19 +280,32 @@ table_rough <-
     tasmin_cor = cor(mean_tasmin, xa$tasmin, method = "spearman"),
     tasmax_cor = cor(mean_tasmax, xa$tasmax, method = "spearman")
   ) %>%
-  full_join(cmip_chisq, by = "source_id") %>% 
-  full_join(tap_df, by = "source_id") %>% 
+  full_join(cmip_drought, by = "source_id") %>% 
+  #format column for mean ± sd
+  mutate(duration = glue("{round(mean_n_mon, 1)}±{round(sd_n_mon, 1)}")) %>% 
+  dplyr::select(-mean_n_mon, -sd_n_mon) %>% 
+  arrange(
+    min_rank(desc(pvals)) +
+    min_rank(desc(pr_cor)) +
+    min_rank(desc(tas_cor))
+    ) %>% 
+  full_join(season_plots)
+```
+
+
+```{r gt_rough, include=FALSE}
+table_rough <-
+  table_data %>% 
   #make columns for plots to go eventually
   mutate(pr_plot = NA,
-         tas_plot = NA,
-         drought_hist = NA) %>%
+         tas_plot = NA) %>%
   #make into gt
   gt() %>%
   #place plots
   text_transform(
     locations = cells_body(pr_plot),
     fn = function(x) {
-      map(season_plots$pr_season,
+      map(table_data$pr_season,
           ggplot_image,
           height = px(80),
           aspect_ratio = 1.5)
@@ -446,29 +314,20 @@ table_rough <-
   text_transform(
     locations = cells_body(tas_plot),
     fn = function(x) {
-      map(season_plots$tas_season,
+      map(table_data$tas_season,
           ggplot_image,
           height = px(80),
           aspect_ratio = 1.5)
     }
   ) %>% 
-  text_transform(
-    locations = cells_body(drought_hist),
-    fn = function(x) {
-      map(drought_plots$prop_droughts,
-          ggplot_image,
-          height = px(80),
-          aspect_ratio = 1.5)
-    }
-  ) %>% 
+  cols_hide(ends_with("season")) %>% 
   # round correlations
-  fmt_number(ends_with("_cor")) %>% 
-  fmt_number(chisq, decimals = 3)
+  fmt_number(ends_with("_cor"))
+# table_rough
 ```
 
-```{r echo=FALSE}
-table_formatted <- 
-  table_rough %>% 
+```{r gt_format, echo=FALSE, message=FALSE, warning=FALSE}
+table_rough %>% 
   # highlight poor correlations
   tab_style(
     style = list(
@@ -506,29 +365,18 @@ table_formatted <-
       rows = tasmax_cor < 0.45
     )
   ) %>% 
-  # highlight significant p-values for goodness of fit test
+  #highlight significant p-values for drought duration
   tab_style(
     style = list(
       cell_text(color = "red")
     ),
     locations = cells_body(
-      columns = chisq,
-      rows = chisq <= 0.05
+      columns = duration,
+      rows = pvals < 0.05
     )
   ) %>% 
-  # highlight mean annual precipitation not within 20% of observed
-  tab_style(
-    style = list(
-      cell_text(color = "red")
-    ),
-    locations = cells_body(
-      columns = c(pr_mean_annual),
-      rows = !within20
-    )
-  ) %>% 
-  cols_hide(within20) %>% 
-  tab_spanner("Seasonality", c(ends_with("_plot"), ends_with("cor")), id = "season") %>% 
-  tab_spanner("Historical Drought Freq.", c(drought_hist, chisq), id = "hist") %>% 
+  tab_spanner("Monthly means", c(ends_with("_plot"), ends_with("cor")), id = "season") %>%
+  tab_spanner("Drought duration and frequency", c(duration, n_droughts), id = "droughts") %>%
   cols_label(
     source_id = "Source",
     pr_mean_annual = "Mean annual pr (∆obs) [mm/yr]",
@@ -536,10 +384,16 @@ table_formatted <-
     tas_cor = "tas",
     tasmin_cor = "tasmin",
     tasmax_cor = "tasmax",
-    pr_plot = "precip",
-    tas_plot = "temp",
-    drought_hist = "drought freq.",
-    chisq = "Chi-squared"
+    pr_plot = "precipitation",
+    tas_plot = "temperature",
+    n_droughts = "number",
+    duration = "duration (mon) mean ± SD"
+  ) %>% 
+  cols_hide(pvals) %>% 
+  cols_move_to_end(c(duration, n_droughts)) %>% 
+  tab_footnote(
+    "Red indicates signifcant Wilcoxon rank sum test (p < 0.05).",
+    cells_column_labels("duration")
   ) %>% 
   tab_footnote(
     md("Observed data from [Xavier et al. (2016)](https://doi.org/10.1002/joc.4518)"),
@@ -552,10 +406,8 @@ table_formatted <-
                cells_column_labels(pr_mean_annual)) %>% 
   tab_footnote("Spearman's rho. Rho < 0.45 highlighted in red.",
                cells_column_spanners("season")) %>% 
-  tab_footnote("p-value from Chi-squared goodness-of-fit test comparing frequency of categories of drought to observed.  A smaller p-value means more dissimilar frequencies.",
-               cells_column_spanners("hist")) %>% 
   tab_header(title = "Comparison of observed data to CMIP6 'historical' output",
-             subtitle = "Data only from 1980 to 2015 to match observed. Results under 'Seasonality' refer to means for each month. Results under 'Historical Drought Freq' use SPEI3 to categorize drought into no drought (blue), mild (yellow), moderate (orange), severe (dark orange), and extreme (red)")
+             subtitle = "Data only from 1980 to 2015 to match observed.")
 ```
 
 ```{r echo=FALSE}
@@ -575,7 +427,7 @@ Below are validation reports and plots of all data downloaded from each CMIP6 so
 ```{r plot_fun, include=FALSE}
 # Function to plot data
 plot_all <- function(data) {
-  p_list <- map(c("tas", "tasmin", "tasmax", "pr", "hfls", "hfss", "pet", "spei"),
+  p_list <- map(c("tas", "pr", "hfls", "hfss", "pet", "spei"),
       ~ggplot(data,
               aes_string(x = "time", y = .x, color = "experiment_id")) +
         geom_line(alpha = 0.5) + 
@@ -586,770 +438,17 @@ plot_all <- function(data) {
 }
 ```
 
-```{r echo=FALSE}
-i=1
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+for (i in seq_len(length(df_list))) {
+  cat('\n')
+  cat("## ", names(df_list[i]), "\n")
+  p <- plot_all(df_list[[i]])
+  print(p)
+  cat('\n')
+}
 ```
 
 
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-
-```{r echo=FALSE}
-i=2
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=3
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=4
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=5
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=6
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=7
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=8
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=9
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=10
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=11
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=12
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=13
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=14
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=15
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-```{r echo=FALSE}
-i=16
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-
-```{r echo=FALSE}
-i=17
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-
-```{r echo=FALSE}
-i=18
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
-
-
-
-```{r echo=FALSE}
-i=19
-htmltools::h2(names(df_list[i]))
-```
-```{r validate=TRUE}
-  col_exists(
-    df_list[[i]],
-    c("hfls", "hfss", "tas", "tasmin", "tasmax", "pr"),
-    label = "all variables exist"
-    ) 
-  col_vals_make_set(
-    df_list[[i]],
-    experiment_id,
-    c("historical", "ssp126", "ssp245", "ssp585"),
-    label = "all scenarios exist"
-  )
-  col_vals_not_null(
-    df_list[[i]],
-    c(hfls, hfss, tas, tasmin, tasmax, pr),
-    label = "no missing values"
-  )
-  col_vals_expr(
-    df_list[[i]],
-    ~max(.$pr) > as_units(200, "mm/month"),
-    label = "precipitation is reasonable"
-  )
-  col_vals_between(
-    df_list[[i]],
-    c(tas, tasmin, tasmax),
-    10,
-    55,
-    label = "temperature is reasonable",
-    preconditions = ~. %>% dplyr::mutate(across(starts_with("tas"), as.numeric))
-  )
-```
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-plot_all(df_list[[i]])
-```
 
 

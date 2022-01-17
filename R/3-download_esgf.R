@@ -51,7 +51,7 @@ for(i in 1:nrow(to_get)) {
   print(glue("downloading {to_get$file_name[i]}: {i} of {nrow(to_get)}"))
   orig <- to_get$path[i]
   dl_path <- paste0(orig, "_full")
-  y <- safe_GET(to_get$file_url[i], write_disk(dl_path), timeout(60))
+  y <- safe_GET(to_get$file_url[i], write_disk(dl_path)) #can add timeout(90) as an arg if you want, but some files take a long time, so they will not finish
   if (is.null(y)) {
     warning("Timeout reached (probably)")
     file.remove(dl_path)
@@ -63,7 +63,7 @@ for(i in 1:nrow(to_get)) {
   } else {
     warn_for_status(y)
   }
-  Sys.sleep(1.5)
+  Sys.sleep(1)
 }
 failed <- esgf_dl %>% filter(!file.exists(path))
 write_csv(failed, here("metadata", "esgf_dl_failed.csv"))
