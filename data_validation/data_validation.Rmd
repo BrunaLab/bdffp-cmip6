@@ -109,7 +109,7 @@ df_list <- map(df_list, convert_units)
 
 For this analysis, I only want to use models with `pr`, `tas`, `hfss`, and `hfls` variables in all 5 scenarios (historical, ssp126, ssp245, ssp370, and ssp585)
 
-```{r}
+```{r include=FALSE}
 df_list <- 
   df_list %>%
   keep(~all(c("pr", "tas", "hfss", "hfls") %in% names(.x))) %>% 
@@ -379,7 +379,6 @@ table_rough %>%
   tab_spanner("Drought duration and frequency", c(duration, n_droughts), id = "droughts") %>%
   cols_label(
     source_id = "Source",
-    pr_mean_annual = "Mean annual pr (∆obs) [mm/yr]",
     pr_cor = "pr",
     tas_cor = "tas",
     tasmin_cor = "tasmin",
@@ -402,21 +401,10 @@ table_rough %>%
       rows = source_id == "observed"
     )
   ) %>% 
-  tab_footnote("Red indicates mean annual precipitation not within ± 20% of observed",
-               cells_column_labels(pr_mean_annual)) %>% 
   tab_footnote("Spearman's rho. Rho < 0.45 highlighted in red.",
                cells_column_spanners("season")) %>% 
   tab_header(title = "Comparison of observed data to CMIP6 'historical' output",
              subtitle = "Data only from 1980 to 2015 to match observed.")
-```
-
-```{r echo=FALSE}
-table_formatted %>% 
-  cols_width(
-    drought_hist ~ px(150),
-    pr_plot ~ px(150),
-    tas_plot ~ px(150)
-  )
 ```
 
 
