@@ -19,6 +19,7 @@ library(units)
 library(ggforce) #to get ggplot to work with `units`
 library(gt)
 library(SPEI)
+library(glue)
 source(here::here("R", "functions.R"))
 theme_set(theme_bw())
 # Use `validate_rmd()` here to set options for the
@@ -171,7 +172,17 @@ cmip_drought <-
   cmip_drought
 ) %>% 
   mutate(source_id = fct_inorder(source_id))
-# cmip_drought %>% arrange(mean_n_mon)
+
+#non-parametric t-tests (wilcoxon rank sum test).  Significant p means different from observed.
+pvals <- numeric(nrow(cmip_drought))
+pvals[1] <- NA
+for(i in 2:nrow(cmip_drought)) {
+  pvals[i] <- wilcox.test(cmip_drought$droughts[[1]], cmip_drought$droughts[[i]])$p.value
+}
+cmip_drought <- 
+  cmip_drought %>%
+  add_column(pvals) %>% 
+  select(-droughts)
 ```
 
 # Comparison to Observed Historical
@@ -284,6 +295,7 @@ table_rough <-
 ```
 
 ```{r gt_format, echo=FALSE}
+#TODO: move drought stuff to right, add some kind of color highlighting if greater than ± 20%
 table_rough %>% 
   # highlight poor correlations
   tab_style(
@@ -322,6 +334,16 @@ table_rough %>%
       rows = tasmax_cor < 0.45
     )
   ) %>% 
+  #highlight significant p-values for drought duration
+  tab_style(
+    style = list(
+      cell_text(color = "red")
+    ),
+    locations = cells_body(
+      columns = duration,
+      rows = pvals < 0.05
+    )
+  ) %>% 
   tab_spanner("Monthly means", c(ends_with("_plot"), ends_with("cor")), id = "season") %>%
   tab_spanner("Drought duration and frequency", c(duration, n_droughts), id = "droughts") %>%
   cols_label(
@@ -333,7 +355,13 @@ table_rough %>%
     pr_plot = "precipitation",
     tas_plot = "temperature",
     n_droughts = "number",
-    duration = "duration (mon)"
+    duration = "duration (mon) mean ± SD"
+  ) %>% 
+  cols_hide(pvals) %>% 
+  cols_move_to_end(c(duration, n_droughts)) %>% 
+  tab_footnote(
+    "Red indicates signifcant Wilcoxon rank sum test (p < 0.05).",
+    cells_column_labels("duration")
   ) %>% 
   tab_footnote(
     md("Observed data from [Xavier et al. (2016)](https://doi.org/10.1002/joc.4518)"),
