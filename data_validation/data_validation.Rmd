@@ -48,6 +48,7 @@ stop_if_not(!any(!paste0(source_id, "_data.csv") %in% csvs))
 ```
 
 
+
 ```{r read_files, message=FALSE, warning=FALSE, include=FALSE}
 #read in all files for CMIP6
 df_list <-
@@ -96,6 +97,18 @@ df_list <-
 
 ```{r convert, include=FALSE}
 df_list <- map(df_list, convert_units)
+```
+
+
+# Ensure that all models are complete
+
+For this analysis, I only want to use models with `pr`, `tas`, `hfss`, and `hfls` variables in all 5 scenarios (historical, ssp126, ssp245, ssp370, and ssp585)
+
+```{r}
+df_list <- 
+  df_list %>%
+  keep(~all(c("pr", "tas", "hfss", "hfls") %in% names(.x))) %>% 
+  keep(~all(c("historical", "ssp126", "ssp245", "ssp370", "ssp585") %in% .x$experiment_id))
 ```
 
 # Calculations
@@ -175,8 +188,7 @@ cmip_drought <-
 
 #non-parametric t-tests (wilcoxon rank sum test).  Significant p means different from observed.
 pvals <- numeric(nrow(cmip_drought))
-pvals[1] <- NA
-for(i in 2:nrow(cmip_drought)) {
+for(i in 1:nrow(cmip_drought)) {
   pvals[i] <- wilcox.test(cmip_drought$droughts[[1]], cmip_drought$droughts[[i]])$p.value
 }
 cmip_drought <- 
@@ -187,6 +199,7 @@ cmip_drought <-
 
 # Comparison to Observed Historical
 
+I've ranked the CMIP6 models based on the correlations of monthly precipitation and temperature and the p-value from a non-parametric t-test (Wilcoxon rank sum test) for the mean duration of droughts defined as the nubmer of consecutive months with SPEI ≤ -1. 
 
 ```{r include=FALSE}
 season_df <- 
@@ -249,10 +262,8 @@ season_plots <-
 ```
 
 
-
-
-```{r gt_rough, include=FALSE}
-table_rough <-
+```{r table_data, include=FALSE}
+table_data <- 
   season_df %>%
   group_by(source_id) %>%
   summarize(
@@ -265,6 +276,17 @@ table_rough <-
   #format column for mean ± sd
   mutate(duration = glue("{round(mean_n_mon, 1)}±{round(sd_n_mon, 1)}")) %>% 
   dplyr::select(-mean_n_mon, -sd_n_mon) %>% 
+  arrange(
+    min_rank(desc(pvals)) +
+    min_rank(desc(pr_cor)) +
+    min_rank(desc(tas_cor))
+    )
+```
+
+
+```{r gt_rough, include=FALSE}
+table_rough <-
+  table_data %>% 
   #make columns for plots to go eventually
   mutate(pr_plot = NA,
          tas_plot = NA) %>%
