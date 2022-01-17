@@ -1,5 +1,10 @@
 ---
 title: "Plot and validate CMIP6 downloads"
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
 output: 
   html_document:
     toc: yes
@@ -186,6 +191,7 @@ cmip_drought <-
 ) %>% 
   mutate(source_id = fct_inorder(source_id))
 
+
 #non-parametric t-tests (wilcoxon rank sum test).  Significant p means different from observed.
 pvals <- numeric(nrow(cmip_drought))
 for(i in 1:nrow(cmip_drought)) {
@@ -244,6 +250,7 @@ season_plots <-
         scale_x_continuous("month", breaks = 1:12,
                            labels = ~month(.x, label = FALSE)) +
         scale_y_unit("pr", limits = c(0, 456)) +
+        labs(y = "mm/mon") +
         theme(text = element_text(size = 45))
     }),
     tas_season = map(data, ~{
@@ -256,6 +263,7 @@ season_plots <-
                            breaks = 1:12,
                            labels = ~ month(.x, label = FALSE)) +
         scale_y_unit("tas", limits = c(19, 43)) +
+        labs(y = "ºC") +
         theme(text = element_text(size = 45))
     })) %>% 
       dplyr::select(-data)
@@ -371,6 +379,7 @@ table_rough %>%
   tab_spanner("Drought duration and frequency", c(duration, n_droughts), id = "droughts") %>%
   cols_label(
     source_id = "Source",
+    pr_mean_annual = "Mean annual pr (∆obs) [mm/yr]",
     pr_cor = "pr",
     tas_cor = "tas",
     tasmin_cor = "tasmin",
@@ -393,10 +402,21 @@ table_rough %>%
       rows = source_id == "observed"
     )
   ) %>% 
+  tab_footnote("Red indicates mean annual precipitation not within ± 20% of observed",
+               cells_column_labels(pr_mean_annual)) %>% 
   tab_footnote("Spearman's rho. Rho < 0.45 highlighted in red.",
                cells_column_spanners("season")) %>% 
   tab_header(title = "Comparison of observed data to CMIP6 'historical' output",
              subtitle = "Data only from 1980 to 2015 to match observed.")
+```
+
+```{r echo=FALSE}
+table_formatted %>% 
+  cols_width(
+    drought_hist ~ px(150),
+    pr_plot ~ px(150),
+    tas_plot ~ px(150)
+  )
 ```
 
 

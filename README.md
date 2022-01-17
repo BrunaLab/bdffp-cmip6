@@ -32,20 +32,25 @@ The raw data files are accessed through
 <https://utexas.app.box.com/v/Xavier-etal-IJOC-DATA>). The following
 files were downloaded to `/data_raw/Xavier/`
 
-    #>  [1] "prec_daily_UT_Brazil_v2.2_19800101_19891231.nc" 
-    #>  [2] "prec_daily_UT_Brazil_v2.2_19900101_19991231.nc" 
-    #>  [3] "prec_daily_UT_Brazil_v2.2_20000101_20091231.nc" 
-    #>  [4] "prec_daily_UT_Brazil_v2.2_20100101_20151231.nc" 
-    #>  [5] "Tmax_daily_UT_Brazil_v2_19800101_19891231.nc"   
-    #>  [6] "Tmax_daily_UT_Brazil_v2_19900101_19991231.nc"   
-    #>  [7] "Tmax_daily_UT_Brazil_v2_20000101_20061231.nc"   
-    #>  [8] "Tmax_daily_UT_Brazil_v2_20070101_20131231.nc"   
-    #>  [9] "Tmax_daily_UT_Brazil_v2_20140101_20170731_s1.nc"
-    #> [10] "Tmin_daily_UT_Brazil_v2_19800101_19891231.nc"   
-    #> [11] "Tmin_daily_UT_Brazil_v2_19900101_19991231.nc"   
-    #> [12] "Tmin_daily_UT_Brazil_v2_20000101_20061231.nc"   
-    #> [13] "Tmin_daily_UT_Brazil_v2_20070101_20131231.nc"   
-    #> [14] "Tmin_daily_UT_Brazil_v2_20140101_20170731_s1.nc"
+    #>  [1] "ETo_daily_UT_Brazil_v2_19800101_19891231.nc"    
+    #>  [2] "ETo_daily_UT_Brazil_v2_19900101_19991231.nc"    
+    #>  [3] "ETo_daily_UT_Brazil_v2_20000101_20061231.nc"    
+    #>  [4] "ETo_daily_UT_Brazil_v2_20070101_20131231.nc"    
+    #>  [5] "ETo_daily_UT_Brazil_v2_20140101_20170731_s1.nc" 
+    #>  [6] "prec_daily_UT_Brazil_v2.2_19800101_19891231.nc" 
+    #>  [7] "prec_daily_UT_Brazil_v2.2_19900101_19991231.nc" 
+    #>  [8] "prec_daily_UT_Brazil_v2.2_20000101_20091231.nc" 
+    #>  [9] "prec_daily_UT_Brazil_v2.2_20100101_20151231.nc" 
+    #> [10] "Tmax_daily_UT_Brazil_v2_19800101_19891231.nc"   
+    #> [11] "Tmax_daily_UT_Brazil_v2_19900101_19991231.nc"   
+    #> [12] "Tmax_daily_UT_Brazil_v2_20000101_20061231.nc"   
+    #> [13] "Tmax_daily_UT_Brazil_v2_20070101_20131231.nc"   
+    #> [14] "Tmax_daily_UT_Brazil_v2_20140101_20170731_s1.nc"
+    #> [15] "Tmin_daily_UT_Brazil_v2_19800101_19891231.nc"   
+    #> [16] "Tmin_daily_UT_Brazil_v2_19900101_19991231.nc"   
+    #> [17] "Tmin_daily_UT_Brazil_v2_20000101_20061231.nc"   
+    #> [18] "Tmin_daily_UT_Brazil_v2_20070101_20131231.nc"   
+    #> [19] "Tmin_daily_UT_Brazil_v2_20140101_20170731_s1.nc"
 
 # Data processing overview
 
@@ -93,7 +98,7 @@ the Compernicus API, you’ll need to go through the steps described here:
 
 # QA/QC
 
-See `data_validation` for a simple data validation report and plots of
-the raw data. See also the errata for CMIP6 to check for known issues
-with particular models, scenarios, and variables
+See [data validation](https://brunalab.github.io/heliconia-cmip/) for
+reports and plots of the data. See also the errata for CMIP6 to check
+for known issues with particular models, scenarios, and variables
 (<https://errata.es-doc.org/static/index.html>)
