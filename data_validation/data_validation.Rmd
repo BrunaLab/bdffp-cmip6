@@ -201,7 +201,7 @@ cmip_drought <-
 
 I've ranked the CMIP6 models based on the correlations of monthly precipitation and temperature and the p-value from a non-parametric t-test (Wilcoxon rank sum test) for the mean duration of droughts defined as the nubmer of consecutive months with SPEI ≤ -1. 
 
-```{r include=FALSE}
+```{r message=FALSE, warning=FALSE, include=FALSE}
 season_df <- 
   df_list %>% 
   map_dfr(~{.x %>% 
@@ -318,7 +318,7 @@ table_rough <-
 # table_rough
 ```
 
-```{r gt_format, echo=FALSE}
+```{r gt_format, echo=FALSE, message=FALSE, warning=FALSE}
 table_rough %>% 
   # highlight poor correlations
   tab_style(
