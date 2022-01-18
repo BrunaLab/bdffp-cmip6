@@ -410,7 +410,7 @@ table_rough %>%
 
 # CMIP model details
 
-Below are validation reports and plots of all data downloaded from each CMIP6 source.
+Below are plots of all data downloaded from each CMIP6 source.
 
 ```{r plot_fun, include=FALSE}
 # Function to plot data
