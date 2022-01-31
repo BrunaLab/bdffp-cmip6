@@ -166,48 +166,14 @@ xa_spei <-
   ))
 ```
 
-I calculate drought duration as number of consecutive months with SPEI ≤ -1.  A single drought, therefore, is defined here as a span of consecutive months all with SPEI ≤ -1.
-
-```{r drougt_duration, include=FALSE}
-# categorize and count droughts
-xa_drought <- 
-  calc_drought_duration(xa_spei) %>% 
-  add_column(source_id = "observed") %>% 
-  dplyr::select(source_id, everything())
-
-cmip_drought <- 
-  df_list %>% 
-  map_dfr(~.x %>% 
-            filter(time <= max(xa_spei$date) & time >= min(xa_spei$date)) %>%  
-            calc_drought_duration(),
-          .id = "source_id"
-  ) 
-
-# join together
-cmip_drought <- 
-  bind_rows(
-  xa_drought,
-  cmip_drought
-) %>% 
-  mutate(source_id = fct_inorder(source_id))
-
-
-#non-parametric t-tests (wilcoxon rank sum test).  Significant p means different from observed.
-pvals <- numeric(nrow(cmip_drought))
-for(i in 1:nrow(cmip_drought)) {
-  pvals[i] <- wilcox.test(cmip_drought$droughts[[1]], cmip_drought$droughts[[i]])$p.value
-}
-cmip_drought <- 
-  cmip_drought %>%
-  add_column(pvals) %>% 
-  select(-droughts)
-```
 
 # Comparison to Observed Historical
 
-I've ranked the CMIP6 models based on the correlations of monthly precipitation and temperature and the p-value from a non-parametric t-test (Wilcoxon rank sum test) for the mean duration of droughts defined as the nubmer of consecutive months with SPEI ≤ -1. 
+Because SPEI, the variable of interest, is standardized, we looked for models that captured seasonality of precipitation rather than focusing on how well they estimate the exact amounts of precipitation. We calculated mean precipitation for January through December and then calculated a correlation coefficient between the 12 monthly means from each CMIP model and the 12 observed means.  We eliminated models with correlation coefficients less than 0.6 for precipitation.  Additionally, SPEI takes evapotranspiration into account, specifically through `hfls` and `hfss`.  Because these variables were not available for observed data, we used temperature but with a less stringent cutoff of correlations greater than 0.4.  Additionally we calculated SPEI for each model and counted the number of droughts (SPEI < -1) in each month.  However, SPEI was not used to determine which models remained in our ensemble because we did not have strong expectations that accuracy of past SPEI or drought frequency is a good measure of GCM model skill in predicting future SPEI.
+
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
+# get monthly means of precip and temperature
 season_df <- 
   df_list %>% 
   map_dfr(~{.x %>% 
@@ -218,10 +184,8 @@ season_df <-
       summarize(across(c(pr, starts_with("tas")), mean,
                        .names = "mean_{.col}")) 
   }, .id = "source_id")
-```
 
-
-```{r include=FALSE}
+# get monthly means for observed
 xa2 <- xa %>% 
   rename_with(~paste0("mean_", .), .cols = -month) %>% 
   add_column(source_id = "observed") %>% 
@@ -229,6 +193,22 @@ xa2 <- xa %>%
 season_df <- bind_rows(xa2, season_df) %>% 
   #move "observed" to the top by making it the first level
   mutate(source_id = fct_inorder(source_id))
+```
+
+```{r}
+cmip_drought <- 
+  df_list %>%
+  map_dfr(~.x %>%
+            filter(time >= ymd("1980-01-01") &
+                     time <= ymd("2015-09-30")) %>%
+            calc_drought_duration, .id = "source_id")
+
+cmip_drought <-
+  bind_rows(
+    calc_drought_duration(xa_spei) %>% add_column(source_id = "observed"),
+    cmip_drought
+  ) %>% 
+  select(source_id, mean_n_mon, sd_n_mon)
 ```
 
 
@@ -269,28 +249,76 @@ season_plots <-
       dplyr::select(-data)
 ```
 
+```{r}
+#calculate number of droughts per month and mean drought duration
+
+# number droughts per month
+drought_df <- 
+  df_list %>%
+  map_dfr( ~{ 
+    .x %>% filter(time >= ymd("1980-01-01") &
+                    time <= ymd("2015-09-30")) %>% 
+      mutate(drought = spei < -1) %>% 
+      filter(!is.na(drought)) %>% 
+      mutate(month = month(time)) %>% 
+      group_by(month) %>% 
+      summarize(n_droughts = sum(drought))
+  }, .id = "source_id")
+
+xa_drought_seasonality <-
+  xa_spei %>% 
+  mutate(drought = spei < -1) %>% 
+  filter(!is.na(drought)) %>% 
+  mutate(month = month(date)) %>% 
+  group_by(month) %>% 
+  summarize(n_droughts = sum(drought)) %>% 
+  add_column(source_id = "observed")
+
+drought_df <- bind_rows(drought_df, xa_drought_seasonality)
+
+```
+
+```{r drought-plots}
+#create mini-histograms of numbers of droughts
+
+drought_plots <-
+  drought_df %>%  
+  group_by(source_id) %>%
+  nest() %>% 
+  mutate(
+    drought_season = map(data, ~{
+      ggplot(.x, aes(x = month, y = n_droughts)) +
+        geom_col(fill = "orange") +
+        scale_x_continuous("month", breaks = 1:12,
+                           labels = ~month(.x, label = FALSE)) +
+        labs(y = "# SPEI < -1") +
+        theme(text = element_text(size = 45))
+    })) %>% 
+      dplyr::select(-data)
+# drought_plots$drought_season[[1]]
+```
+
 
 ```{r table_data, include=FALSE}
 table_data <- 
   season_df %>%
   group_by(source_id) %>%
   summarize(
-    pr_cor = cor(mean_pr, xa$pr, method = "spearman"),
-    tas_cor = cor(mean_tas, xa$tas, method = "spearman"),
-    tasmin_cor = cor(mean_tasmin, xa$tasmin, method = "spearman"),
-    tasmax_cor = cor(mean_tasmax, xa$tasmax, method = "spearman")
+    pr_cor = cor(mean_pr, xa$pr, method = "pearson"),
+    tas_cor = cor(mean_tas, xa$tas, method = "pearson")
   ) %>%
   full_join(cmip_drought, by = "source_id") %>% 
   #format column for mean ± sd
   mutate(duration = glue("{round(mean_n_mon, 1)}±{round(sd_n_mon, 1)}")) %>% 
   dplyr::select(-mean_n_mon, -sd_n_mon) %>% 
   arrange(
-    min_rank(desc(pvals)) +
     min_rank(desc(pr_cor)) +
     min_rank(desc(tas_cor))
     ) %>% 
-  full_join(season_plots)
+  full_join(season_plots) %>% 
+  full_join(drought_plots)
 ```
+
 
 
 ```{r gt_rough, include=FALSE}
@@ -298,7 +326,9 @@ table_rough <-
   table_data %>% 
   #make columns for plots to go eventually
   mutate(pr_plot = NA,
-         tas_plot = NA) %>%
+         tas_plot = NA,
+         drought_plot = NA) %>%
+  select(source_id, pr_cor, pr_plot, tas_cor, tas_plot, drought_duration = duration, drought_plot) %>% 
   #make into gt
   gt() %>%
   #place plots
@@ -320,7 +350,15 @@ table_rough <-
           aspect_ratio = 1.5)
     }
   ) %>% 
-  cols_hide(ends_with("season")) %>% 
+  text_transform(
+    locations = cells_body(drought_plot),
+    fn = function(x) {
+      map(table_data$drought_season,
+          ggplot_image,
+          height = px(80),
+          aspect_ratio = 1.5)
+    }
+  ) %>% 
   # round correlations
   fmt_number(ends_with("_cor"))
 # table_rough
@@ -335,7 +373,7 @@ table_rough %>%
     ),
     locations = cells_body(
       columns = pr_cor,
-      rows = pr_cor < 0.45
+      rows = pr_cor < 0.6
     )
   ) %>% 
     tab_style(
@@ -344,55 +382,21 @@ table_rough %>%
     ),
     locations = cells_body(
       columns = tas_cor,
-      rows = tas_cor < 0.45
+      rows = tas_cor < 0.4
     )
   )  %>% 
-  tab_style(
-    style = list(
-      cell_text(color = "red")
-    ),
-    locations = cells_body(
-      columns = tasmin_cor,
-      rows = tasmin_cor < 0.45
-    )
-  ) %>% 
-  tab_style(
-    style = list(
-      cell_text(color = "red")
-    ),
-    locations = cells_body(
-      columns = tasmax_cor,
-      rows = tasmax_cor < 0.45
-    )
-  ) %>% 
-  #highlight significant p-values for drought duration
-  tab_style(
-    style = list(
-      cell_text(color = "red")
-    ),
-    locations = cells_body(
-      columns = duration,
-      rows = pvals < 0.05
-    )
-  ) %>% 
-  tab_spanner("Monthly means", c(ends_with("_plot"), ends_with("cor")), id = "season") %>%
-  tab_spanner("Drought duration and frequency", c(duration, n_droughts), id = "droughts") %>%
+  tab_spanner("Seasonality (monthly means)",
+              c(starts_with("pr_"), starts_with("tas_")),
+              id = "season") %>%
+  tab_spanner("Droughts (SPEI < -1)", c(drought_duration, drought_plot), id = "droughts") %>%
   cols_label(
     source_id = "Source",
-    pr_cor = "pr",
-    tas_cor = "tas",
-    tasmin_cor = "tasmin",
-    tasmax_cor = "tasmax",
+    pr_cor = "pr cor",
+    tas_cor = "tas cor",
     pr_plot = "precipitation",
     tas_plot = "temperature",
-    n_droughts = "number",
-    duration = "duration (mon) mean ± SD"
-  ) %>% 
-  cols_hide(pvals) %>% 
-  cols_move_to_end(c(duration, n_droughts)) %>% 
-  tab_footnote(
-    "Red indicates signifcant Wilcoxon rank sum test (p < 0.05).",
-    cells_column_labels("duration")
+    drought_duration = "mean ± SD duration (months)",
+    drought_plot = "drought seasonality" 
   ) %>% 
   tab_footnote(
     md("Observed data from [Xavier et al. (2016)](https://doi.org/10.1002/joc.4518)"),
@@ -401,7 +405,7 @@ table_rough %>%
       rows = source_id == "observed"
     )
   ) %>% 
-  tab_footnote("Spearman's rho. Rho < 0.45 highlighted in red.",
+  tab_footnote("Red numbers highlight correlations (Pearson's r) < 0.6 for precipitation and < 0.4 for mean temperature.",
                cells_column_spanners("season")) %>% 
   tab_header(title = "Comparison of observed data to CMIP6 'historical' output",
              subtitle = "Data only from 1980 to 2015 to match observed.")
