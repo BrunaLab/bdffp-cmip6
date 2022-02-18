@@ -66,7 +66,8 @@ aggregate_write <- function(source_id, by) {
     map_df(~agg_to_tibble(.x, by = by), .id = "dir") %>% 
     mutate(source_id = str_match(dir, "/([^/]+)/([^/]+)$" )[,2],
            experiment_id = str_match(dir, "/([^/]+)/([^/]+)$")[,3],
-           .after = dir) 
+           .after = dir) %>% 
+    select(-dir)
   out_path <- here("data", paste(source_id, "data.csv", sep = "_"))
   message(paste("writing to", out_path))
   write_csv(out_df, out_path)
@@ -79,5 +80,5 @@ aggregate_write <- function(source_id, by) {
 
 # do the aggregate_write() function for all sources
 
-sources <- dir(here("data_raw", "CMIP6"))
+sources <- dir(here::here("data_raw", "CMIP6"))
 walk(sources, ~aggregate_write(.x, by = circle))
