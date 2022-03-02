@@ -12,7 +12,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 library(pointblank)
 library(tidyverse)
@@ -31,7 +31,7 @@ theme_set(theme_bw())
 # pointblank validation workflow within R Markdown documents
 ```
 
-```{r load_index, message=FALSE, warning=FALSE, include=FALSE}
+```{r load_index}
 idx <- read_csv(here("metadata", "cmip6_index.csv"))
 ```
 
@@ -39,7 +39,7 @@ idx <- read_csv(here("metadata", "cmip6_index.csv"))
 
 Check that all the directories for the .nc files got made
 
-```{r validate=TRUE}
+```{r validate=TRUE, echo=TRUE}
 source_dl <- dir(here("data_raw", "CMIP6"))
 source_id <- idx$source_id %>% unique() %>% str_to_lower() %>% str_replace_all("-", "_")
 stop_if_not(!any(!source_id %in% source_dl))
@@ -47,14 +47,14 @@ stop_if_not(!any(!source_id %in% source_dl))
 
 Check that all the corresponding .csv files exist
 
-```{r validate=TRUE}
+```{r validate=TRUE, echo=TRUE}
 csvs <- list.files(here('data'))
 stop_if_not(!any(!paste0(source_id, "_data.csv") %in% csvs))
 ```
 
 
 
-```{r read_files, message=FALSE, warning=FALSE, include=FALSE}
+```{r read_files}
 #read in all files for CMIP6
 df_list <-
   map(list.files(here('data'),
@@ -75,32 +75,32 @@ xa <-
          across(starts_with("tas"), ~set_units(.x, "degC")))
 ```
 
-```{r filter_time, include=FALSE}
+```{r filter_time}
 #filter so timespan is consistent
-df_list <- 
-  df_list %>% map(~{
-    .x %>% 
-      filter((
-        experiment_id == "historical" &
-          between(
-            time,
-            ymd_hms("1850-01-01 12:00:00"),
-            ymd_hms("2014-12-31 12:00:00")
-          )
-      ) |
-        (
-          experiment_id != "historical" &
-            between(
-              time,
-              ymd_hms("2015-01-01 12:00:00"),
-              ymd_hms("2100-12-31 12:00:00")
-            )
-        ))
-    
-  })
+# df_list <- 
+#   df_list %>% map(~{
+#     .x %>% 
+#       filter((
+#         experiment_id == "historical" &
+#           between(
+#             time,
+#             ymd_hms("1850-01-01 12:00:00"),
+#             ymd_hms("2014-12-31 12:00:00")
+#           )
+#       ) |
+#         (
+#           experiment_id != "historical" &
+#             between(
+#               time,
+#               ymd_hms("2015-01-01 12:00:00"),
+#               ymd_hms("2100-12-31 12:00:00")
+#             )
+#         ))
+#     
+#   })
 ```
 
-```{r convert, include=FALSE}
+```{r convert}
 df_list <- map(df_list, convert_units)
 ```
 
@@ -109,7 +109,7 @@ df_list <- map(df_list, convert_units)
 
 For this analysis, I only want to use models with `pr`, `tas`, `hfss`, and `hfls` variables in all 5 scenarios (historical, ssp126, ssp245, ssp370, and ssp585)
 
-```{r include=FALSE}
+```{r subset}
 df_list <- 
   df_list %>%
   keep(~all(c("pr", "tas", "hfss", "hfls") %in% names(.x))) %>% 
@@ -133,7 +133,7 @@ L_v(T) = 2.501 - 0.002361T
 $$
 in MJ/kg
 
-```{r pet, include=FALSE}
+```{r pet}
 df_list <- 
   df_list %>%
   map(~ .x %>% mutate(pet = pet_energy_only(hfls, hfss, tas))) %>% 
@@ -146,7 +146,7 @@ df_list <-
 
 For the observed data and the CMIP6 data from the same period, I calculate 3-month SPEI using precipitation and PET.
 
-```{r spei, include=FALSE}
+```{r spei}
 df_list <- 
   df_list %>%
   map(calc_spei)
@@ -172,7 +172,7 @@ xa_spei <-
 Because SPEI, the variable of interest, is standardized, we looked for models that captured seasonality of precipitation rather than focusing on how well they estimate the exact amounts of precipitation. We calculated mean precipitation for January through December and then calculated a correlation coefficient between the 12 monthly means from each CMIP model and the 12 observed means.  We eliminated models with correlation coefficients less than 0.6 for precipitation.  Additionally, SPEI takes evapotranspiration into account, specifically through `hfls` and `hfss`.  Because these variables were not available for observed data, we used temperature but with a less stringent cutoff of correlations greater than 0.4.  Additionally we calculated SPEI for each model and counted the number of droughts (SPEI < -1) in each month.  However, SPEI was not used to determine which models remained in our ensemble because we did not have strong expectations that accuracy of past SPEI or drought frequency is a good measure of GCM model skill in predicting future SPEI.
 
 
-```{r message=FALSE, warning=FALSE, include=FALSE}
+```{r}
 # get monthly means of precip and temperature
 season_df <- 
   df_list %>% 
@@ -212,7 +212,7 @@ cmip_drought <-
 ```
 
 
-```{r mini_plots, include=FALSE}
+```{r mini_plots}
 # Create mini plots of monthly average precip and temperature for table
 
 # season_df$mean_pr %>% range()
@@ -299,7 +299,7 @@ drought_plots <-
 ```
 
 
-```{r table_data, include=FALSE}
+```{r table_data}
 table_data <- 
   season_df %>%
   group_by(source_id) %>%
@@ -321,7 +321,7 @@ table_data <-
 
 
 
-```{r gt_rough, include=FALSE}
+```{r gt_rough}
 table_rough <-
   table_data %>% 
   #make columns for plots to go eventually
@@ -364,7 +364,7 @@ table_rough <-
 # table_rough
 ```
 
-```{r gt_format, echo=FALSE, message=FALSE, warning=FALSE}
+```{r gt_format}
 table_rough %>% 
   # highlight poor correlations
   tab_style(
@@ -412,11 +412,131 @@ table_rough %>%
 ```
 
 
+# Data validation
+
+```{r}
+bigdf <- 
+  df_list %>%
+  bind_rows() %>% 
+  #pointblank not compatible with units package, so convert to numeric:
+  mutate(across(c(hfls, hfss, pr, tas, tasmax, tasmin, pet, cb), as.numeric)) %>% 
+  mutate(date = date(time))
+```
+
+```{r}
+#define action levels
+al <- action_levels(warn_at = 0.02)
+al_strict <- action_levels(stop_at = 1L)
+```
+
+## Check for duplicated dates
+
+Check for overlap in the date ranges of historical experiment and SSPs
+
+```{r}
+df_summary <- 
+  bigdf %>% 
+  group_by(source_id, experiment_id) %>%
+  summarize(date_min = min(date),
+            date_max = max(date), 
+            .groups = "drop")
+df_hist <- 
+  df_summary %>% 
+  filter(experiment_id == "historical") %>%
+  select(source_id, hist_end = date_max)
+
+df_dates <- 
+  left_join(df_hist, df_summary %>% filter(experiment_id != "historical"))
+```
+
+
+```{r}
+create_agent(df_dates, actions = al_strict) %>%
+  col_vals_gt(columns = vars(date_min),
+              value = vars(hist_end), 
+              segments = vars(source_id)) %>%
+  interrogate()
+```
+
+For `fgoals_g3` The historical experiment ends December 2016, a year after other models historical experiments.  The SSPs start on January of 2016.
+
+
+```{r eval=FALSE, include=FALSE}
+create_agent(bigdf, actions = al_strict) %>% 
+  rows_distinct(columns = vars(date),
+                label = "Check for duplicated dates for historical",
+                preconditions = ~ . %>% filter(experiment_id == "historical"),
+                segments = vars(source_id),
+                actions = al_strict) %>% 
+  rows_distinct(columns = vars(date),
+                label = "Check for duplicated dates for ssp1",
+                preconditions = ~ . %>% filter(experiment_id == "ssp126"),
+                segments = vars(source_id),
+                actions = al_strict) %>% 
+  rows_distinct(columns = vars(date),
+                label = "Check for duplicated dates for ssp2",
+                preconditions = ~ . %>% filter(experiment_id == "ssp245"),
+                segments = vars(source_id),
+                actions = al_strict) %>% 
+  rows_distinct(columns = vars(date),
+                label = "Check for duplicated dates for ssp3",
+                preconditions = ~ . %>% filter(experiment_id == "ssp370"),
+                segments = vars(source_id),
+                actions = al_strict) %>% 
+  rows_distinct(columns = vars(date),
+                label = "Check for duplicated dates for ssp5",
+                preconditions = ~ . %>% filter(experiment_id == "ssp585"),
+                segments = vars(source_id),
+                actions = al_strict) %>% 
+  interrogate()
+```
+
+`fgoals_g3` also has duplicated dates *within* the historical experiment
+
+```{r echo=TRUE}
+fgoals_hist <- 
+  bigdf %>% 
+  filter(source_id == "fgoals_g3", experiment_id == "historical") 
+dupes <- 
+  fgoals_hist %>% 
+  filter(duplicated(date)) %>% pull(date)
+fgoals_hist %>% 
+    filter(date %in% dupes) %>% 
+  arrange(date)
+  
+```
+
+Something went wrong in the wrangling as a result of the overlap between historical and SSPs.  Be sure to filter `fgoals_g3` to remove the last year from the historical experiment.
+
+## Check that values are reasonable in the "historical" experiments
+
+```{r}
+agent <- 
+  create_agent(
+    bigdf,
+    actions = al
+  ) %>% 
+  col_vals_between(columns = vars(tas, tasmax, tasmin), 10, 45, 
+                   na_pass = TRUE, #not all datasets have tasmin and tasmax
+                   label = "Check for reasonable temperature values",
+                   preconditions = ~ . %>% filter(experiment_id == "historical")) %>%
+  col_vals_between(columns = vars(pr), 0, 400,
+                   label = "Check for reasonable precip values",
+                   preconditions = ~ . %>% filter(experiment_id == "historical")) %>% 
+  col_vals_not_null(columns = vars(spei), 
+                    preconditions = ~ . %>% filter(date >= ymd("1850-03-01"))) %>% 
+  col_vals_not_in_set(columns = vars(spei), c(-Inf, Inf)) %>% 
+  interrogate()
+agent
+```
+
+All of the failing tests for temperature are `access_esm1_5`, which has 9 `tasmax` values above 45ºC (max 48ºC).  Most of the failing precipitation rows are also for `access_esm1_5`, which predicts ~100 months with precipitation > 400mm (max 594mm) in the historical experiment.  Infinite values for SPEI are essentially just beyond the range of quantification.  `bcc_csm2_mr` and `fgoals_f3_l` have the largest number of `-Inf` values for SPEI.
+
 # CMIP model details
 
 Below are plots of all data downloaded from each CMIP6 source.
 
-```{r plot_fun, include=FALSE}
+```{r plot_fun}
 # Function to plot data
 plot_all <- function(data) {
   p_list <- map(c("tas", "pr", "hfls", "hfss", "pet", "spei"),
@@ -431,7 +551,7 @@ plot_all <- function(data) {
 ```
 
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+```{r results='asis'}
 for (i in seq_len(length(df_list))) {
   cat('\n')
   cat("## ", names(df_list[i]), "\n")
