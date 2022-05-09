@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# heliconia-cmip
+# bdffp-cmip6
 
 <!-- badges: start -->
 <!-- badges: end -->
