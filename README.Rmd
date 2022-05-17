@@ -15,6 +15,8 @@ library(knitr)
 # heliconia-cmip
 
 <!-- badges: start -->
+[![DOI](https://zenodo.org/badge/426372968.svg)](https://zenodo.org/badge/latestdoi/426372968)
+
 <!-- badges: end -->
 
 The goal of heliconia-cmip is to download, crop, and spatially aggregate historical and projected climate data from CMIP6 models for an area centered around the Biological Dynamics of Forest Fragments Project (BDFFP).

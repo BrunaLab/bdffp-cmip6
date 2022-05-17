@@ -1,9 +1,12 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# bdffp-cmip6
+# heliconia-cmip
 
 <!-- badges: start -->
+
+[![DOI](https://zenodo.org/badge/426372968.svg)](https://zenodo.org/badge/latestdoi/426372968)
+
 <!-- badges: end -->
 
 The goal of heliconia-cmip is to download, crop, and spatially aggregate
@@ -73,18 +76,18 @@ contained in the circle appropriately.
 The finished data are found in the `data/` directory with one .csv file
 per model (AKA `source_id`) with the following structure:
 
-| colname        | longname                                   | type      | units      |
-|:---------------|:-------------------------------------------|:----------|:-----------|
-| dir            | directory                                  | character | NA         |
-| source\_id     | source ID                                  | character | NA         |
-| experiment\_id | experiment ID                              | character | NA         |
-| time           | time                                       | POSIXct   | NA         |
-| hfls           | Surface Upward Latent Heat Flux            | numeric   | W m-2      |
-| hfss           | Surface Upward Sensible Heat Flux          | numeric   | W m-2      |
-| pr             | Precipitation                              | numeric   | kg m-2 s-1 |
-| tas            | Near-Surface Air Temperature               | numeric   | K          |
-| tasmin         | Daily Maximum Near-Surface Air Temperature | numeric   | K          |
-| tasmax         | Daily Minimum Near-Surface Air Temperature | numeric   | K          |
+| colname       | longname                                   | type      | units      |
+|:--------------|:-------------------------------------------|:----------|:-----------|
+| dir           | directory                                  | character | NA         |
+| source_id     | source ID                                  | character | NA         |
+| experiment_id | experiment ID                              | character | NA         |
+| time          | time                                       | POSIXct   | NA         |
+| hfls          | Surface Upward Latent Heat Flux            | numeric   | W m-2      |
+| hfss          | Surface Upward Sensible Heat Flux          | numeric   | W m-2      |
+| pr            | Precipitation                              | numeric   | kg m-2 s-1 |
+| tas           | Near-Surface Air Temperature               | numeric   | K          |
+| tasmin        | Daily Maximum Near-Surface Air Temperature | numeric   | K          |
+| tasmax        | Daily Minimum Near-Surface Air Temperature | numeric   | K          |
 
 # Reproducibility
 
