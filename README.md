@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# heliconia-cmip
+# Downloading and wrangling CMIP6 model output for the Biological Dynamics of Forest Fragments Project region
 
 <!-- badges: start -->
 
@@ -9,9 +9,9 @@
 
 <!-- badges: end -->
 
-The goal of heliconia-cmip is to download, crop, and spatially aggregate
-historical and projected climate data from CMIP6 models for an area
-centered around the Biological Dynamics of Forest Fragments Project
+The goal of this repository is to download, crop, and spatially
+aggregate historical and projected climate data from CMIP6 models for an
+area centered around the Biological Dynamics of Forest Fragments Project
 (BDFFP).
 
 # Data sources
@@ -105,3 +105,12 @@ See [data validation](https://brunalab.github.io/heliconia-cmip/) for
 reports and plots of the data. See also the errata for CMIP6 to check
 for known issues with particular models, scenarios, and variables
 (<https://errata.es-doc.org/static/index.html>)
+
+# Citation
+
+If you wish to use or adapt the code or data sets in this repository,
+please cite as:
+
+> Eric R Scott. (2022). BrunaLab/bdffp-cmip6: Downloading and wrangling
+> CMIP6 model output for the Biological Dynamics of Forest Fragments
+> Project region. Zenodo. <https://doi.org/10.5281/zenodo.6558263>
