@@ -101,7 +101,7 @@ the Compernicus API, you’ll need to go through the steps described here:
 
 # QA/QC
 
-See [data validation](https://brunalab.github.io/heliconia-cmip/) for
+See [data validation](https://brunalab.github.io/bdffp-cmip6/) for
 reports and plots of the data. See also the errata for CMIP6 to check
 for known issues with particular models, scenarios, and variables
 (<https://errata.es-doc.org/static/index.html>)
